@@ -1,6 +1,7 @@
 ﻿using ArtGallery;
 using Divide;
 using KingsTaxes;
+using Shepherd;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -50,6 +51,10 @@ public class LoadLevelEditor : ScriptedImporter
         else if (name.StartsWith("hullLevel"))
         {
             obj = LoadHullLevel(fileSelected, name);
+        }
+        else if (name.StartsWith("shepherdLevel"))
+        {
+            obj = LoadShepherdLevel(fileSelected, name);
         }
         else
         {
@@ -323,6 +328,37 @@ public class LoadLevelEditor : ScriptedImporter
         return asset;
     }
 
+     private UnityEngine.Object LoadShepherdLevel(XElement fileSelected, string name)
+    {
+        // create the output scriptable object
+        var asset = ScriptableObject.CreateInstance<ShepherdLevel>();
+
+        // retrieve page data from .ipe file
+        var items = fileSelected.Descendants("page").First().Descendants("use");
+
+        // get marker data into respective vector list
+        List<string> markerTypes = new List<string> {"disk", "square", "cross", "circle"};
+        
+        List<Vector2> sheepLocs = GetMarkers(items, "");
+
+        asset.SheepList.AddRange(sheepLocs);
+        System.Console.WriteLine(sheepLocs);
+        // normalize coordinates
+        
+        var rect = BoundingBoxComputer.FromPoints(sheepLocs);
+
+        asset.SheepList = Normalize(rect, ktSIZE, asset.SheepList);
+        
+
+        // give warning if no relevant data found
+        if (asset.SheepList.Count == 0)
+        {
+            EditorUtility.DisplayDialog("Warning", "File does not contain any valid markers.", "OK");
+        }
+
+        return asset;
+    }
+
     /// <summary>
     /// Retrieve a vector list for all markers elements with given name
     /// </summary>
@@ -418,4 +454,5 @@ public class LoadLevelEditor : ScriptedImporter
                 (p[1] - (rect.yMin + rect.height / 2f)) * scale))
             .ToList();
     }
+
 }
