@@ -339,14 +339,19 @@ public class LoadLevelEditor : ScriptedImporter
         // get marker data into respective vector list
         List<string> markerTypes = new List<string> {"disk", "square", "cross", "circle"};
         
-        List<Vector2> sheepLocs = GetMarkers(items, "");
-
-        asset.SheepList.AddRange(sheepLocs);
-        System.Console.WriteLine(sheepLocs);
+        for (int i = 0; i < markerTypes.Count; i++)
+        {
+            List<Vector2> sheepLocs = GetMarkers(items, markerTypes[i]);
+            foreach (Vector2 l in sheepLocs)
+            {
+                asset.addSheep(l, i);
+            }
+            
+        }
+        
         // normalize coordinates
         
-        var rect = BoundingBoxComputer.FromPoints(sheepLocs);
-
+        var rect = BoundingBoxComputer.FromPoints(asset.SheepList);
         asset.SheepList = Normalize(rect, ktSIZE, asset.SheepList);
         
 

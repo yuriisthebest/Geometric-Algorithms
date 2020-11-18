@@ -13,6 +13,12 @@
     {
         [Header("Sheep")]
         public List<Vector2> SheepList = new List<Vector2>();
-       
+        public List<int> SheepTypes = new List<int>();
+
+        public void addSheep(Vector2 loc, int type)
+        {
+            SheepList.Add(loc);
+            SheepTypes.Add(type);
+        }
     }
 }

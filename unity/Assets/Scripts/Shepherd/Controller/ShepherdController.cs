@@ -31,7 +31,7 @@
         private bool m_levelSolved;
         private bool m_restartLevel;
 
-        //private static List<Color> Colors = new List<Color> {Color.red, Color.green, Color.yellow, Color.blue};
+        private static List<Color> Colors = new List<Color> {Color.red, Color.green, Color.yellow, Color.blue};
 
         void Start()
         {
@@ -58,12 +58,14 @@
 
             var level = m_levels[m_levelCounter];
 
-            foreach (Vector2 sheep in level.SheepList)
+            for (int i = 0; i < level.SheepList.Count; i++)
             {
+                var sheep = level.SheepList[i];
+                var type = level.SheepTypes[i];
                 var pos = new Vector3(sheep.x, sheep.y, -1);
                 var obj = Instantiate(m_sheepPrefab, pos, Quaternion.identity) as GameObject;
-                //SpriteRenderer sr = obj.GetComponent<SpriteRenderer>();
-                //sr.color = Colors[sheep.type];
+                SpriteRenderer sr = obj.GetComponent<SpriteRenderer>();
+                sr.color = Colors[type];
                 m_sheep.Add(obj);
             }
         }
