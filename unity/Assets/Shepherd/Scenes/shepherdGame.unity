@@ -230,6 +230,7 @@ GameObject:
   - component: {fileID: 543643152367178275}
   - component: {fileID: 543643152367178276}
   - component: {fileID: 543643152367178277}
+  - component: {fileID: 543643152367178279}
   m_Layer: 0
   m_Name: EventSystem
   m_TagString: Untagged
@@ -237,6 +238,20 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &543643152367178279
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 543643152367178278}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82ab39250d175574d93b9c8c46ff775d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  shepherd: {fileID: 1943175474568420032, guid: 0a2e848125d0dbb49aa131d931fc10ad,
+    type: 3}
 --- !u!1 &543643152511528332
 GameObject:
   m_ObjectHideFlags: 0
@@ -293,8 +308,6 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-    m_TypeName: UnityEngine.UI.MaskableGraphic+CullStateChangedEvent, UnityEngine.UI,
-      Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
   m_FontData:
     m_Font: {fileID: 12800000, guid: 2b8da20d9161d5346820093527f0a1c3, type: 3}
     m_FontSize: 28
@@ -360,8 +373,6 @@ MonoBehaviour:
           m_StringArgument: shepherdMenu
           m_BoolArgument: 0
         m_CallState: 1
-    m_TypeName: UnityEngine.UI.Button+ButtonClickedEvent, UnityEngine.UI, Version=1.0.0.0,
-      Culture=neutral, PublicKeyToken=null
 --- !u!114 &543643152522358460
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -380,8 +391,6 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-    m_TypeName: UnityEngine.UI.MaskableGraphic+CullStateChangedEvent, UnityEngine.UI,
-      Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
   m_Sprite: {fileID: 21300000, guid: bda0f7c9dd0d5aa4fa051b50aa990083, type: 3}
   m_Type: 1
   m_PreserveAspect: 1
