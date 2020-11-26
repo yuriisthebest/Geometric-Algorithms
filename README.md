@@ -1,8 +1,16 @@
-# Ruler of the Plane
+# Shepherd
 
-Ruler of the Plane is a set of games illustrating concepts from combinatorial and computational geometry. The games are based on the art gallery problem, ham-sandwich cuts, the Voronoi game, and geometric network connectivity problems like the Euclidean minimum spanning tree and traveling salesperson problem. 
+In this game, place shepherds so that they oversee all their sheep! Every sheep can be seen only by the shepherd closest to it.
 
-The games are implemented using C# in the game engine Unity.
+## Relevant source files
 
-There is a website for the games, where also the online WebGL version is hosted:
-http://www.win.tue.nl/~kbuchin/proj/ruler/
+Scripts can be found in '''/unity/Assets/Scripts/Shepherd'''. In the '''Controller''' folder, the main logic can be found in '''ShepherdController.cs''', with the work division denoted in comments.
+The implementation of vertical decomposition is found in '''VerticalDecomposition.cs'''.
+The '''Model''' folder includes the representation of a Shepherd level. 
+
+In '''/unity/Assets/Shepherd''', GUI components and supporting files, like the levels, can be found.
+
+## Group 5
+* Anne Brouwers
+* Christine Ingwersen
+* Yuri Maas

@@ -34,6 +34,9 @@
 
         private static List<Color> Colors = new List<Color> {Color.red, Color.green, Color.yellow, Color.blue};
 
+        public GameObject shepherd;
+        private bool cooldown = false;
+
         void Start()
         {
             InitLevel();
@@ -41,9 +44,22 @@
 
         void Update()
         {
-
+            if (Input.GetMouseButton(0) && !cooldown) {
+                var mousePos = Input.mousePosition;
+                mousePos.z = 2.0f;
+                var objectPos = Camera.main.ScreenToWorldPoint(mousePos);
+                Instantiate(shepherd, objectPos, Quaternion.identity);
+                
+                Invoke("ResetCooldown", 0.5f);
+                cooldown = true;
+            }
         }
 
+        private void ResetCooldown() {
+            cooldown = false;
+        }
+
+        // Anne
         public void InitLevel()
         {
             foreach (var sheep in m_sheep) Destroy(sheep);
@@ -67,6 +83,7 @@
             }
         }
 
+        // Yuri
         public void CheckSolution()
         {
             throw new System.NotImplementedException();
@@ -78,17 +95,25 @@
             InitLevel();
         }
 
+        // Anne
         public Polygon2D LocatePoint(Vector2D p, DCEL InGraph) 
         {
             var vc = VertDecomp(InGraph);
         }
 
-        // Vertical decomposition
-        public List<Polygon2D> VertDecomp(DCEL InGraph) 
+        // Vertical decomposition: Yuri
+        public Verti VertDecomp(DCEL InGraph) 
         {
             
         }
 
+        // Christine
+        public void CreateVoronoi()
+        {
+        
+        }
+
+        // Anne
         public void DrawVoronoi()
         {
         
