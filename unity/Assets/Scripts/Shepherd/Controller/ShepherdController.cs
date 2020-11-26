@@ -44,12 +44,13 @@
 
         void Update()
         {
+            // Add a shepherd to the game when the user clicks
             if (Input.GetMouseButton(0) && !cooldown) {
                 var mousePos = Input.mousePosition;
                 mousePos.z = 2.0f;
                 var objectPos = Camera.main.ScreenToWorldPoint(mousePos);
                 Instantiate(shepherd, objectPos, Quaternion.identity);
-                
+                // Don't let the user spam a lot of shepherds
                 Invoke("ResetCooldown", 0.5f);
                 cooldown = true;
             }
@@ -101,10 +102,14 @@
             var vc = VertDecomp(InGraph);
         }
 
-        // Vertical decomposition: Yuri
-        public Verti VertDecomp(DCEL InGraph) 
+        /* Create a vertical decomposition of the Voronoi diagram of the shepherds
+         *  will be used to determine the nearest shepherd for each sheep
+         * 
+         * Responsible: Yuri
+         */
+        public VerticalDecomposition VertDecomp(DCEL InGraph) 
         {
-            
+            return new VerticalDecomposition(InGraph);
         }
 
         // Christine
