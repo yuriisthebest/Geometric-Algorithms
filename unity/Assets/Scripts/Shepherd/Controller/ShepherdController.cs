@@ -11,6 +11,7 @@
     using Util.Geometry;
     using Util.Geometry.DCEL;
     using Util.Geometry.Duality;
+    using Util.Geometry.Polygon;
 
     public class ShepherdController : MonoBehaviour, IController
     {
@@ -45,10 +46,6 @@
 
         public void InitLevel()
         {
-            //if (m_levelCounter >= m_levels.Count) {
-            //    Console.WriteLine("Last level");
-            //}
-
             foreach (var sheep in m_sheep) Destroy(sheep);
 
             m_sheep.Clear();
@@ -80,5 +77,23 @@
             m_levelCounter++;
             InitLevel();
         }
+
+        public Polygon2D LocatePoint(Vector2D p, DCEL InGraph) 
+        {
+            var vc = VertDecomp(InGraph);
+        }
+
+        // Vertical decomposition
+        public List<Polygon2D> VertDecomp(DCEL InGraph) 
+        {
+            
+        }
+
+        public void DrawVoronoi()
+        {
+        
+        }
+
+
     }
 }
