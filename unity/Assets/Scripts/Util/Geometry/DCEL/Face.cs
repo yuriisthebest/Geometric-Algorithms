@@ -31,6 +31,8 @@
         /// </summary>
         public bool IsOuter { get; set; }
 
+        public Color color { get; set; }
+
         public Face(HalfEdge a_outerComponent)
         {
             OuterComponent = a_outerComponent;
