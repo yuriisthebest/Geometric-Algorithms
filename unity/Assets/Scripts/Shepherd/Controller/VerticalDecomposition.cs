@@ -16,10 +16,12 @@ public class VerticalDecomposition
     public VerticalDecomposition(DCEL InGraph)
     {
         // TODO, Initialize vertical decomposition with one trapezoid containing the entire canvas
+        // This depends on how the bounding box is implemented or if that still has to be done.
 
-        // Transform all DCEL edges into Linesegments
+
+        // TODO Randomize the collection of half-edges
         ICollection<HalfEdge> edges = InGraph.Edges;
-        // TODO Pick a random segment (or randomize the list of halfedges before adding)
+        // Transform all DCEL edges into Linesegments
         foreach (HalfEdge edge in edges)
         {
             // Only add half-edges whose face is above it
@@ -43,22 +45,31 @@ public class VerticalDecomposition
      */
     void Insert(LineSegment seg)
     {
+        List<SearchNode> OldLeafs = new List<SearchNode>();
+        List<SearchNode> NewLeafs = new List<SearchNode>();
+
         // Find all trapezoids intersecting the segment
         List<Trapezoid> Intersecting = this.FindIntersecting(seg);
-        // Find all leaves of changed 
-        List<SearchNode> OldLeafs = new List<SearchNode>();
+        // Find all leafs of intersecting trapezoids
         foreach (Trapezoid trap in Intersecting)
         {
             // Trapezoids should always point to leafs
             if (!trap.leaf.isLeaf) { throw new System.Exception(); }
             OldLeafs.Add(trap.leaf);
         }
-        // Modify all intersecting trapezoids, by deleting, merging and creating trapezoids TODO
-        // First split trapezoids in two, three or four trapezoids, then merge trapezoids
+        // Modify all intersecting trapezoids, by deleting, merging and creating trapezoids
+        List<Trapezoid> newTrapezoids = this.CreateTrapezoids(Intersecting, seg);
+        
+        // Create new leafs for the new trapezoids
+        foreach (Trapezoid trapezoid in newTrapezoids)
+        {
+            SearchNode leaf = new SearchNode(trapezoid);
+            NewLeafs.Add(leaf);
+            trapezoid.SetLeaf(leaf);
+        }
 
-        // Create new leafs for the new trapezoids TODO
-
-        // Change old leafs and add inner nodes that point to new leafs TODO
+        // Change old leafs and add inner nodes that point to new leafs
+        this.UpdateSearchTree(OldLeafs, NewLeafs, seg);
     }
 
     /*
@@ -139,6 +150,280 @@ public class VerticalDecomposition
         return Intersecting;
     }
 
+    /*
+     * Split all trapezoids that are being intersected by a segment 'seg'
+     *  Replace top and bottom segments with the given segment
+     *  Add new trapezoids at the start and end points (if those endpoints are not yet in the VD)
+     *  Ensure all neighbors are correctly assigned
+     *  
+     *  Merge trapezoids where the vertical line has disappeard because of the segment
+     */
+    private List<Trapezoid> CreateTrapezoids(List<Trapezoid> toSplit, LineSegment seg)
+    {
+        List<Trapezoid> newTrapezoids = new List<Trapezoid>();
+        List<Trapezoid> finalTrapezoids = new List<Trapezoid>();
+        Trapezoid newUpper;
+        Trapezoid newLower;
+        Trapezoid oldUpper = null;
+        Trapezoid oldLower = null;
+        bool StartDegenerate = false;
+        
+        // If the left endpoint of the segment does not yet exist, create a trapezoid between that point and the left point of the first old trapezoid
+        if (seg.point1 != toSplit[0].left)
+        {
+            // This trapezoid will neighbor both next upper and lower neighbors
+            oldUpper = new Trapezoid(toSplit[0].left, seg.point1, toSplit[0].top, toSplit[0].bottom);
+            foreach (Trapezoid neighbor in toSplit[0].Neighbors)
+            {
+                // Take the neighbors of the old trapezoid and add them to new trapezoid, except if the neighbor has been intersected by the segment
+                neighbor.DeleteNeighbor(toSplit[0]);
+                if (toSplit.Contains(neighbor)) { continue; }
+                neighbor.AddNeighbor(oldUpper);
+                oldUpper.AddNeighbor(neighbor);
+            }
+            oldLower = oldUpper;
+            newTrapezoids.Add(oldUpper);
+            StartDegenerate = true;
+        }
+        // Split each intersected trapezoid in two, one trapezoid above the segment and one below (merging of trapezoids happens later)
+        for (int i=0; i < toSplit.Count; i++)
+        {
+            newUpper = new Trapezoid(toSplit[i].left, toSplit[i].right, toSplit[i].top, seg);
+            newLower = new Trapezoid(toSplit[i].left, toSplit[i].right, seg, toSplit[i].bottom);
+            // If the first trapezoid is split in three, don't start the new trapezoids at the left point of trapezoid, but at segment
+            if (StartDegenerate)
+            {
+                StartDegenerate = false;
+                newUpper = new Trapezoid(seg.point1, toSplit[i].right, toSplit[i].top, seg);
+                newLower = new Trapezoid(seg.point1, toSplit[i].right, seg, toSplit[i].bottom);
+            }
+            if (i == toSplit.Count-1 && seg.point2 != toSplit[toSplit.Count - 1].right)
+            {
+                // If the end is split in three, don't start new trapezoids at the right point, but at segment
+                newUpper = new Trapezoid(seg.point1, seg.point2, toSplit[i].top, seg);
+                newLower = new Trapezoid(seg.point1, seg.point2, seg, toSplit[i].bottom);
+            }
+            newUpper.AddNeighbor(oldUpper);
+            oldUpper.AddNeighbor(newUpper);
+            newLower.AddNeighbor(oldLower);
+            oldLower.AddNeighbor(newLower);
+            // Every existing neighbor of the old trapezoid is either replaced (also intersected) or is a neighbor to the new top or lower
+            foreach (Trapezoid neighbor in toSplit[i].Neighbors)
+            {
+                // Delete the trapezoid we are replacing from the neighbor list of all neighbors
+                neighbor.DeleteNeighbor(toSplit[i]);
+                // Don't add the neighbor if it has or will be replaced
+                if (toSplit.Contains(neighbor)) { continue; }
+                // Test if the neighbor belongs to upper or lower
+                //  If the neighbor is left, its right point has to be above segment (to be upper neighbor)
+                //  If the neighbor is right, its left point has to be above segment (to be upper neighbor)
+                //      Neighbor is left if its right point is left of the right point of this trapezoid (neighboring trapezoids cannot have right points at same x)
+                if (neighbor.right.x < toSplit[i].right.x)
+                {
+                    // Neighbor is left
+                    if (seg.Above(neighbor.right))
+                    {
+                        // Neighbor is upper neighbor
+                        newUpper.AddNeighbor(neighbor);
+                        neighbor.AddNeighbor(newUpper);
+                    }
+                    else
+                    {
+                        // Neighbor is lower neighbor
+                        newLower.AddNeighbor(neighbor);
+                        neighbor.AddNeighbor(newLower);
+                    }
+                }
+                else
+                {
+                    // Neighbor is right
+                    if (seg.Above(neighbor.left))
+                    {
+                        // Neighbor is upper neighbor
+                        newUpper.AddNeighbor(neighbor);
+                        neighbor.AddNeighbor(newUpper);
+                    }
+                    else
+                    {
+                        // Neighbor is lower neighbor
+                        newLower.AddNeighbor(neighbor);
+                        neighbor.AddNeighbor(newLower);
+                    }
+                }
+            }
+            newTrapezoids.Add(newUpper);
+            newTrapezoids.Add(newLower);
+            // Point the old trapezoid to the replacements
+            toSplit[i].LowerReplacement = newLower;
+            toSplit[i].UpperReplacement = newUpper;
+            // Set new trapezoids to old for next iteration
+            oldUpper = newUpper;
+            oldLower = newLower;
+        }
+        // If the right endpoint of the segment does not yet exist, create a trapezoid between that point and the right point of the last old trapezoid
+        if (seg.point2 != toSplit[toSplit.Count - 1].right)
+        {
+            // This trapezoid will neigbor both previous lower and upper trapezoids (It's called newupper because that name is available now)
+            newUpper = new Trapezoid(seg.point2, toSplit[toSplit.Count - 1].right, toSplit[toSplit.Count - 1].top, toSplit[toSplit.Count - 1].bottom);
+            newUpper.AddNeighbor(oldUpper);
+            oldUpper.AddNeighbor(newUpper);
+            newUpper.AddNeighbor(oldLower);
+            oldLower.AddNeighbor(newUpper);
+            newTrapezoids.Add(newUpper);
+        }
+
+        /* Merge trapezoids
+         * If the trapezoid has the segment as top, but the right point is above the segment, this trapezoid should be merged with its neighbor
+         * If the trapezoid has the segment as bottom, but the right point is below the segment, this trapezoid should be merged with its neighbor
+         *  Note, if the right point is on the segment, we have reached the end of the segment and nothing should be done
+         */
+        for (int i = 0; i < newTrapezoids.Count; i++)
+        {
+            if (newTrapezoids[i].top == seg)
+            {
+                // Trapezoid is lower trapezoid
+                if (seg.Above(newTrapezoids[i].right)) // Will only be true if point is above segment
+                {
+                    // Find neighbor and merge
+                    // Note that there can only be 1 neighbor to the right of this trapezoid
+                    foreach (Trapezoid t in newTrapezoids[i].Neighbors)
+                    {
+                        if (t.right.x > newTrapezoids[i].right.x)
+                        {
+                            // Merge the two trapezoids by modifying 't' and replacing all neighbors with 't'
+                            //  Note: newTrapezoids[i].top = t.top = seg and newTrapezoids[i].bottom = t.bottom
+                            //  Note: t.right should stay t.right, thus only t.left has to be updated
+                            t.left = newTrapezoids[i].left;
+                            // Add all neighbors of newTrapezoids[i] to t, also update the neighbors
+                            foreach (Trapezoid neighbor in newTrapezoids[i].Neighbors)
+                            {
+                                neighbor.DeleteNeighbor(newTrapezoids[i]);
+                                if (neighbor.Equals(t)) { continue; }
+                                neighbor.AddNeighbor(t);
+                                t.AddNeighbor(neighbor);
+                            }
+                            // Change replacement pointer from newTrapezoid[i] to t
+                            newTrapezoids[i].LowerReplacement = t;
+                            // Note: t will be tested in a next iteration to see if it has to be merged again or if it can be reported
+                        }
+                    }
+                }
+                else
+                {
+                    // There is no problem, just add the trapezoid to the output
+                    finalTrapezoids.Add(newTrapezoids[i]);
+                }
+            }
+            else if (newTrapezoids[i].bottom == seg)
+            {
+                // Trapezoid is upper trapezoid
+                if (!seg.Above(newTrapezoids[i].right) && (seg.point2 != newTrapezoids[i].right)) // Wil also be true if point is on segment, test for that too
+                {
+                    // Find neighbor and merge
+                    // Note that there can only be 1 neighbor to the right of this trapezoid
+                    foreach (Trapezoid t in newTrapezoids[i].Neighbors)
+                    {
+                        if (t.right.x > newTrapezoids[i].right.x)
+                        {
+                            // Merge the two trapezoids by modifying 't' and replacing all neighbors with 't'
+                            //  Note: newTrapezoids[i].top = t.top and newTrapezoids[i].bottom = t.bottom = seg
+                            //  Note: t.right should stay t.right, thus only t.left has to be updated
+                            t.left = newTrapezoids[i].left;
+                            // Add all neighbors of newTrapezoids[i] to t, also update the neighbors
+                            foreach (Trapezoid neighbor in newTrapezoids[i].Neighbors)
+                            {
+                                neighbor.DeleteNeighbor(newTrapezoids[i]);
+                                if (neighbor.Equals(t)) { continue; }
+                                neighbor.AddNeighbor(t);
+                                t.AddNeighbor(neighbor);
+                            }
+                            // Change replacement pointer from newTrapezoid[i] to t
+                            newTrapezoids[i].UpperReplacement = t;
+                            // Note: t will be tested in a next iteration to see if it has to be merged again or if it can be reported
+                        }
+                    }
+                }
+                else
+                {
+                    // No problem, add trapezoid to output
+                    finalTrapezoids.Add(newTrapezoids[i]);
+                }
+            }
+            else
+            {
+                // These are the outer trapezoids next to the segment, these will never have to be merged, so add them to the output
+                finalTrapezoids.Add(newTrapezoids[i]);
+            }
+        }
+        return finalTrapezoids;
+    }
+
+    /*
+     * Modify the search tree by chaning old leafs and adding new leafs and internal nodes
+     * 
+     * Handle the first and last node separately, because they might have created 3 new trapezoids
+     */
+     private void UpdateSearchTree(List<SearchNode> OldLeafs, List<SearchNode> NewLeafs, LineSegment segment)
+    {
+        // If there are trapezoids to the left or right of the segment, then those old trapezoids have special treatment and are not included in the loop
+        int start = 0;
+        int end = 0;
+        // Check if the first old trapezoid contains the left segment point or if that point equals the left point of that trapezoid
+        if (OldLeafs[0].leaf.left != segment.point1)
+        {
+            // replace the leaf with an x-node for the left endpoint of segment and a y-node for the segment
+            //  The first leaf in NewLeafs will be the trapezoid to the left of the segment (thus left child of previous leaf)
+            SearchNode node = new SearchNode(segment);
+            OldLeafs[0].leftChild = NewLeafs[0];
+            OldLeafs[0].rightChild = node;
+            node.leftChild = this.FindLowerReplacement(OldLeafs[0].leaf).leaf; // lower leaf
+            node.rightChild = this.FindUpperReplacement(OldLeafs[0].leaf).leaf; // upper leaf
+            OldLeafs[0].update(segment.point1);
+            // Skip the first iteration of the replacement loop since the leaf of the first trapezoid has already been updated
+            start = 1;
+        }
+        // Check if the last old trapezoid contains the right segment point or if that point equals the right point of that trapezoid
+        if (OldLeafs[OldLeafs.Count-1].leaf.right != segment.point2)
+        {
+            // replace the leaf with an x-node for the left endpoint of segment and a y-node for the segment
+            //  The last leaf in NewLeafs will be the trapezoid to the right of the segment (thus right child of previous leaf)
+            SearchNode node = new SearchNode(segment);
+            OldLeafs[OldLeafs.Count - 1].leftChild = node;
+            OldLeafs[OldLeafs.Count - 1].rightChild = NewLeafs[NewLeafs.Count - 1];
+            node.leftChild = this.FindLowerReplacement(OldLeafs[OldLeafs.Count - 1].leaf).leaf; // lower leaf
+            node.rightChild = this.FindUpperReplacement(OldLeafs[OldLeafs.Count - 1].leaf).leaf; // upper leaf
+            OldLeafs[OldLeafs.Count - 1].update(segment.point2);
+            // Skip the last iteration of the replacement loop since the leaf of the last trapezoid has alreadt been updated
+            end = 1;
+        }
+
+
+        // Each other leaf is replaced by Y-nodes with the segment, with the lower and upper leafs as childs
+        for (int i = start; i < OldLeafs.Count - end; i++)
+        {
+            OldLeafs[i].leftChild = this.FindLowerReplacement(OldLeafs[i].leaf).leaf;
+            OldLeafs[i].rightChild = this.FindUpperReplacement(OldLeafs[i].leaf).leaf;
+            OldLeafs[i].update(segment);
+        }
+    }
+
+    /*
+     * Find lower replacement
+     */
+    public Trapezoid FindLowerReplacement(Trapezoid trap)
+    {
+        if (trap.LowerReplacement == null) { return trap; }
+        return this.FindLowerReplacement(trap.LowerReplacement);
+    }
+
+    /*
+     * Find upper replacement
+     */
+    public Trapezoid FindUpperReplacement(Trapezoid trap)
+    {
+        if (trap.UpperReplacement == null) { return trap; }
+        return this.FindUpperReplacement(trap.UpperReplacement);
+    }
 }
 
 public class Trapezoid
@@ -149,6 +434,9 @@ public class Trapezoid
     public Vector2 right;
     public List<Trapezoid> Neighbors;
     public SearchNode leaf;
+    // Once a trapezoid is set to be replaced, store pointers to the trapezoids it will be replaced by here
+    public Trapezoid LowerReplacement;
+    public Trapezoid UpperReplacement;
 
     /* 
      * Create a trapezoid represented by two linesegments above and below, and two points left and right
@@ -159,6 +447,46 @@ public class Trapezoid
         bottom = b;
         left = l;
         right = r;
+    }
+
+    public bool Equals(Trapezoid t)
+    {
+        //Check for null and compare run-time types.
+        if ((t == null) || !this.GetType().Equals(t.GetType()))
+        {
+            return false;
+        }
+        else
+        {
+            return (top == t.top) && (bottom == t.bottom)
+                && (left == t.left) && (right == t.right);
+        }
+    }
+
+    /*
+     * Give the trapezoid a pointer to the leaf that contains it
+     */
+    public void SetLeaf(SearchNode leafNode)
+    {
+        this.leaf = leafNode;
+    }
+
+    /*
+     * Add a new neighbor to the trapezoid
+     */
+     public void AddNeighbor(Trapezoid neighbor)
+    {
+        if (neighbor == null) { return; }
+        this.Neighbors.Add(neighbor);
+    }
+
+    /*
+     * Delete neighbor from the trapezoid
+     */
+    public void DeleteNeighbor(Trapezoid neighbor)
+    {
+        if (neighbor == null) { return; }
+        this.Neighbors.Remove(neighbor);
     }
 }
 
@@ -220,6 +548,57 @@ public class SearchNode
     public SearchNode leftChild;
     public SearchNode rightChild;
     public Trapezoid leaf;
+
+    /*
+     * Constructor for leaf nodes
+     */
+    public SearchNode(Trapezoid trap)
+    {
+        this.leaf = trap;
+        this.isLeaf = true;
+    }
+
+    /*
+     * Constructor for X-nodes
+     */
+    public SearchNode(Vector2 endpoint)
+    {
+        this.isLeaf = false;
+        this.isXNode = true;
+        this.storeX = endpoint;
+    }
+
+    /*
+     * Constructor for Y-nodes
+     */
+    public SearchNode(LineSegment segment)
+    {
+        this.isLeaf = false;
+        this.isXNode = false;
+        this.storeY = segment;
+    }
+
+    /*
+     * Update node to X-node
+     */
+    public void update(Vector2 endpoint)
+    {
+        isLeaf = false;
+        leaf = null;
+        isXNode = true;
+        storeX = endpoint;
+    }
+
+    /*
+     * Update node to Y-node
+     */
+    public void update(LineSegment segment)
+    {
+        isLeaf = false;
+        leaf = null;
+        isXNode = false;
+        storeY = segment;
+    }
 
 
     /*
