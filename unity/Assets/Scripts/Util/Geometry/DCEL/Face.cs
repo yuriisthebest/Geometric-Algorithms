@@ -32,6 +32,8 @@
         public bool IsOuter { get; set; }
 
         public Color color { get; set; }
+        public int owner;
+
 
         public Face(HalfEdge a_outerComponent)
         {

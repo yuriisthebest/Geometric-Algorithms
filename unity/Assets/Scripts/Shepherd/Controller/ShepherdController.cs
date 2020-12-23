@@ -54,9 +54,11 @@
 
         private readonly Dictionary<Face, EOwnership> m_ownership = new Dictionary<Face, EOwnership>();
         [SerializeField]
-        private int playerIndex = 0;
+        private int playerIndex;
         
         private DCEL m_dcel;
+
+        private System.Random rd = new System.Random();
 
         void Start()
         {
@@ -75,8 +77,8 @@
                 Invoke("ResetCooldown", 0.5f);
                 cooldown = true;
                 
-                // Test: draw a square next to placed sheep
-                m_dcel = new DCEL();
+                // Test: draw a square of random color next to placed sheep
+                //m_dcel = new DCEL();
                 var v1 = m_dcel.AddVertex(new Vector2(objectPos.x, objectPos.y));
                 var v2 = m_dcel.AddVertex(new Vector2(objectPos.x + 1, objectPos.y));
                 var v3 = m_dcel.AddVertex(new Vector2(objectPos.x + 1, objectPos.y + 1));
@@ -85,7 +87,10 @@
                 m_dcel.AddEdge(v1, v2);
                 m_dcel.AddEdge(v2, v3);
                 m_dcel.AddEdge(v3, v4);
-                m_dcel.AddEdge(v4, v1);
+                HalfEdge e1 = m_dcel.AddEdge(v4, v1);
+
+                e1.Twin.Face.owner = rd.Next(4);
+
                 UpdateMesh();
             }
         }
@@ -116,6 +121,8 @@
                 sr.color = Colors[type];
                 m_sheep.Add(obj);
             }
+
+            m_dcel = new DCEL();
         }
 
         // Yuri
@@ -193,31 +200,7 @@
             // iterate over vertices and create triangles accordingly
             foreach (var face in m_dcel.Faces)
             {
-                // Commented out part: TODO get color index from DCEL face
-
-                /*
-                // dont draw anything for unowned vertices
-                if (m_ownership[face] == EOwnership.UNOWNED) continue;
-
-                // get ownership of node
-                var playerIndex = -1;
-                switch (m_ownership[face]) {
-                    case EOwnership.PLAYER1:
-                        playerIndex = 0;
-                        break;
-                    case EOwnership.PLAYER2:
-                        playerIndex = 1;
-                        break;
-                    case EOwnership.PLAYER3:
-                        playerIndex = 2;
-                        break;
-                    case EOwnership.PLAYER4:
-                        playerIndex = 3;
-                        break;
-                }
-                */
-
-                playerIndex = 3;
+                playerIndex = face.owner;
 
                 // cant triangulate outer face
                 if (face.IsOuter) continue;
