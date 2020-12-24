@@ -32,7 +32,6 @@
         
         private int m_levelCounter = 0;
 
-
         private List<GameObject> m_sheep = new List<GameObject>();
 
         private bool m_levelSolved;
@@ -43,6 +42,7 @@
         public GameObject shepherd;
         private bool cooldown = false;
 
+        // Shepherd ownership
         private enum EOwnership
         {
             UNOWNED,
@@ -51,8 +51,18 @@
             PLAYER3,
             PLAYER4
         }
+        private bool shepherdColour1 = true;
+        private bool shepherdColour2;
+        private bool shepherdColour3;
+        private bool shepherdColour4;
 
-        private readonly Dictionary<Face, EOwnership> m_ownership = new Dictionary<Face, EOwnership>();
+        // mapping of vertices to ownership enum
+        private readonly Dictionary<Vector2, EOwnership> m_ownership = new Dictionary<Vector2, EOwnership>();
+
+        // Voronoi objects
+        private Triangulation m_delaunay;
+        private Polygon2D m_meshRect;
+
         [SerializeField]
         private int playerIndex;
         
@@ -63,6 +73,7 @@
         void Start()
         {
             InitLevel();
+            StartVoronoi();
         }
 
         void Update()
@@ -73,25 +84,38 @@
                 mousePos.z = 2.0f;
                 var objectPos = Camera.main.ScreenToWorldPoint(mousePos);
                 Instantiate(shepherd, objectPos, Quaternion.identity);
+
                 // Don't let the user spam a lot of shepherds
                 Invoke("ResetCooldown", 0.5f);
                 cooldown = true;
-                
-                // Test: draw a square of random color next to placed sheep
-                //m_dcel = new DCEL();
-                var v1 = m_dcel.AddVertex(new Vector2(objectPos.x, objectPos.y));
-                var v2 = m_dcel.AddVertex(new Vector2(objectPos.x + 1, objectPos.y));
-                var v3 = m_dcel.AddVertex(new Vector2(objectPos.x + 1, objectPos.y + 1));
-                var v4 = m_dcel.AddVertex(new Vector2(objectPos.x, objectPos.y + 1));
 
-                m_dcel.AddEdge(v1, v2);
-                m_dcel.AddEdge(v2, v3);
-                m_dcel.AddEdge(v3, v4);
-                HalfEdge e1 = m_dcel.AddEdge(v4, v1);
+                // The new vertex
+                var me = new Vector2(objectPos.x, objectPos.y);
 
-                e1.Twin.Face.owner = rd.Next(4);
+                // store owner of vertex
+                m_ownership.Add(me, shepherdColour1 ? EOwnership.PLAYER1 :
+                    shepherdColour2 ? EOwnership.PLAYER2 :  shepherdColour3 ? EOwnership.PLAYER3 : EOwnership.PLAYER4);
+
+                //Add vertex to the triangulation and update the voronoi
+                m_delaunay.AddVertex(me);
+                m_dcel = Voronoi.Create(m_delaunay);
 
                 UpdateMesh();
+
+                // Test: draw a square of random color next to placed sheep
+                //m_dcel = new DCEL();
+                //var v1 = m_dcel.AddVertex(new Vector2(objectPos.x, objectPos.y));
+                //var v2 = m_dcel.AddVertex(new Vector2(objectPos.x + 1, objectPos.y));
+                //var v3 = m_dcel.AddVertex(new Vector2(objectPos.x + 1, objectPos.y + 1));
+                //var v4 = m_dcel.AddVertex(new Vector2(objectPos.x, objectPos.y + 1));
+
+                //m_dcel.AddEdge(v1, v2);
+                //m_dcel.AddEdge(v2, v3);
+                //m_dcel.AddEdge(v3, v4);
+                // HalfEdge e1 = m_dcel.AddEdge(v4, v1);
+
+                //e1.Twin.Face.owner = rd.Next(4);
+
             }
         }
 
@@ -155,9 +179,79 @@
         }
 
         // Christine
-        public void CreateVoronoi()
+        public void StartVoronoi()
+        { 
+            // create initial delaunay triangulation (three far-away points)
+            // TODO: make sure that the sheep are not taken into account!!
+            m_delaunay = Delaunay.Create();
+
+            // add auxiliary vertices as unowned
+            foreach (var vertex in m_delaunay.Vertices)
+            {
+                m_ownership.Add(vertex, EOwnership.UNOWNED);
+            }
+
+            // create polygon of rectangle window for intersection with voronoi
+            float z = Vector2.Distance(m_meshFilter.transform.position, Camera.main.transform.position);
+            var bottomLeft = Camera.main.ViewportToWorldPoint(new Vector3(0, 0, z));
+            var topRight = Camera.main.ViewportToWorldPoint(new Vector3(1, 1, z));
+            m_meshRect = new Polygon2D(
+                new List<Vector2>() {
+                    new Vector2(bottomLeft.x, bottomLeft.z),
+                    new Vector2(bottomLeft.x, topRight.z),
+                    new Vector2(topRight.x, topRight.z),
+                    new Vector2(topRight.x, bottomLeft.z)
+                });
+
+            VoronoiDrawer.CreateLineMaterial();
+        }
+
+        // Christine
+        public static DCEL CreateVoronoi(Triangulation m_delaunay)
         {
-        
+            if (!Delaunay.IsValid(m_delaunay))
+            {
+                throw new GeomException("Triangulation should be delaunay for the Voronoi diagram.");
+            }
+
+            var dcel = new DCEL();
+
+            // create vertices for each triangles circumcenter and store them in a dictionary
+            Dictionary<Triangle, DCELVertex> vertexMap = new Dictionary<Triangle, DCELVertex>();
+            foreach (var triangle in m_delaunay.Triangles)
+            {
+                // degenerate triangle, just ignore
+                if (!triangle.Circumcenter.HasValue) continue;
+
+                var vertex = new DCELVertex(triangle.Circumcenter.Value);
+                dcel.AddVertex(vertex);
+                vertexMap.Add(triangle, vertex);
+            }
+
+            // remember which edges where visited
+            // since each edge has a twin
+            var edgesVisited = new HashSet<TriangleEdge>();
+
+            foreach (var edge in m_delaunay.Edges)
+            {
+                // either already visited twin edge or edge is outer triangle
+                if (edgesVisited.Contains(edge) || edge.IsOuter) continue;
+
+                // add edge between the two adjacent triangles vertices
+                // vertices at circumcenter of triangle
+                if (edge.T != null && edge.Twin.T != null)
+                {
+                    var v1 = vertexMap[edge.T];
+                    var v2 = vertexMap[edge.Twin.T];
+
+                    dcel.AddEdge(v1, v2);
+
+                    edgesVisited.Add(edge);
+                    edgesVisited.Add(edge.Twin);
+                }
+            }
+
+            return dcel;
         }
 
         // Anne
