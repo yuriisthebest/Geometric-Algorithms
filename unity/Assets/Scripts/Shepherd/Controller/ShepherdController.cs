@@ -149,11 +149,27 @@
             m_dcel = new DCEL();
         }
 
-        // Yuri
-        public void CheckSolution()
+        /*
+         * Check if a solution is correct by checking if every sheep is within the correct area
+         */
+         // Yuri
+        public bool CheckSolution(VerticalDecomposition vd)
         {
-            throw new System.NotImplementedException();
+            foreach (GameObject sheep in this.m_sheep)
+            {
+                Vector2 sheep_pos = new Vector2(sheep.transform.position.x, sheep.transform.position.y);
+                // Check if the owner of the area that the sheep is located in is equal to the sheeps owner
+                // TODO, find color / owner of sheep and link it to the owner
+                //sheep.GetComponent<SpriteRenderer>().color;
+                if (vd.Search(sheep_pos).bottom.face.owner != 1)
+                {
+                    return false;
+                }
+            }
+            return true;
         }
+        // I get errors if I don't implement this function (since I added parameter in function above)
+        public void CheckSolution() { }
 
         public void AdvanceLevel()
         {
@@ -175,7 +191,7 @@
          */
         public VerticalDecomposition VertDecomp(DCEL InGraph) 
         {
-            return new VerticalDecomposition(InGraph);
+            return new VerticalDecomposition(InGraph, m_meshFilter);
         }
 
         // Christine

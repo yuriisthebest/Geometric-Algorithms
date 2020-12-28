@@ -13,12 +13,20 @@ public class VerticalDecomposition
      *  Store with each segment the shepherd above it
      *  Incrementally add each segment to the vertical decomposition
      */
-    public VerticalDecomposition(DCEL InGraph)
+    public VerticalDecomposition(DCEL InGraph, MeshFilter m_meshFilter)
     {
-        // TODO, Initialize vertical decomposition with one trapezoid containing the entire canvas
-        // This depends on how the bounding box is implemented or if that still has to be done.
+        // *** Initialize vertical decomposition with one trapezoid containing the entire canvas ***
+        // Find bounding box corners
+        float z = Vector2.Distance(m_meshFilter.transform.position, Camera.main.transform.position);
+        var bottomLeft = Camera.main.ViewportToWorldPoint(new Vector3(0, 0, z));
+        var topRight = Camera.main.ViewportToWorldPoint(new Vector3(1, 1, z));
+        LineSegment bottom = new LineSegment(new Vector2(bottomLeft.x, bottomLeft.z), new Vector2(topRight.x, bottomLeft.z), null);
+        LineSegment top = new LineSegment(new Vector2(bottomLeft.x, topRight.z), new Vector2(topRight.x, topRight.z), null);
+        // Create initial trapezoid and root of searchtree
+        Trapezoid inital_trapezoid = new Trapezoid(new Vector2(bottomLeft.x, topRight.z), new Vector2(topRight.x, bottomLeft.z), top, bottom);
+        this.TreeRoot = new SearchNode(inital_trapezoid);
 
-
+        // *** Add all edges to the vertical decomposition ***
         // TODO Randomize the collection of half-edges
         ICollection<HalfEdge> edges = InGraph.Edges;
         // Transform all DCEL edges into Linesegments
@@ -27,6 +35,7 @@ public class VerticalDecomposition
             // Only add half-edges whose face is above it
             //  So only add half-edges whose to-vertex is to the right of the from-vertex
             //  So skip half-edges where 'to' has smaller x value than 'from'
+            // Also skip edges going to and from the bounding box???
             if (edge.To.Pos.x < edge.From.Pos.x) { continue; }
             if (edge.To.Pos.x == edge.From.Pos.x && edge.To.Pos.y <= edge.From.Pos.y) { continue; }
             LineSegment segment = new LineSegment(edge.From.Pos, edge.To.Pos, edge.Face);
@@ -75,7 +84,14 @@ public class VerticalDecomposition
     /*
      * Given a point position, return the trapezoid that point is contained
      */
-    public Trapezoid Search(Vector2 pos, SearchNode root)
+    public Trapezoid Search(Vector2 pos)
+    {
+        // Start the recursive search on the root of the searchtree
+        return this.Search(pos, this.TreeRoot);
+    }
+
+    // Recursive function to search the tree structure for the proper trapezoid
+    private Trapezoid Search(Vector2 pos, SearchNode root)
     {
         SearchNode node = root.Test(pos);
         if (node.isLeaf)
