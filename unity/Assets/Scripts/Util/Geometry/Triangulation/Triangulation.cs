@@ -4,6 +4,7 @@
     using System.Linq;
     using UnityEngine;
     using Util.Math;
+    using Shepherd;
 
     /// <summary>
     /// Class that holds a triangulation, i.e. a collection of triangles.
@@ -17,6 +18,7 @@
     {
 
         private readonly List<Triangle> m_Triangles = new List<Triangle>();
+        private Dictionary<Vector2, int> ownership = new Dictionary<Vector2, int>();
 
         /// <summary>
         /// Collection of triangles in the triangulation.
@@ -33,6 +35,15 @@
             {
                 return m_Triangles.SelectMany(t => t.Edges);
             }
+        }
+
+
+        public void SetOwner(Vector2 vertex, int owner) {
+            ownership.Add(vertex, owner);
+        }
+
+        public int GetOwner(Vector2 vertex) {
+            return ownership[vertex];
         }
 
         /// <summary>

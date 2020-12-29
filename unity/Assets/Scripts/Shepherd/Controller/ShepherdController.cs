@@ -16,6 +16,16 @@ namespace Shepherd
     using Util.Algorithms.Triangulation;
     using Voronoi;
 
+    // Shepherd ownership
+    public enum EOwnership
+    {
+        UNOWNED,
+        PLAYER1,
+        PLAYER2,
+        PLAYER3,
+        PLAYER4
+    }
+
     public class ShepherdController : MonoBehaviour, IController
     {
         [Header("Levels")]
@@ -29,8 +39,10 @@ namespace Shepherd
         [SerializeField]
         private MeshFilter m_meshFilter;
 
-        
+        [SerializeField]
         private int m_levelCounter = 0;
+        [SerializeField]
+        private int m_activeShepherd = 0;
 
         private List<GameObject> m_sheep = new List<GameObject>();
 
@@ -42,15 +54,7 @@ namespace Shepherd
         public GameObject shepherd;
         private bool cooldown = false;
 
-        // Shepherd ownership
-        private enum EOwnership
-        {
-            UNOWNED,
-            PLAYER1,
-            PLAYER2,
-            PLAYER3,
-            PLAYER4
-        }
+        
         private bool shepherdColour1 = true;
         private bool shepherdColour2;
         private bool shepherdColour3;
@@ -81,46 +85,58 @@ namespace Shepherd
             // Add a shepherd to the game when the user clicks
             if (Input.GetMouseButton(0) && !cooldown) {
                 var mousePos = Input.mousePosition;
-                mousePos.z = 2.0f;
-                var objectPos = Camera.main.ScreenToWorldPoint(mousePos);
-                Instantiate(shepherd, objectPos, Quaternion.identity);
+                if (mousePos.y > 75) {
+                    mousePos.z = 2.0f;
+                    var objectPos = Camera.main.ScreenToWorldPoint(mousePos);
+                    var obj = Instantiate(shepherd, objectPos, Quaternion.identity);
+                    SpriteRenderer sr = obj.GetComponent<SpriteRenderer>();
+                    sr.color = Colors[m_activeShepherd];
+                    // Don't let the user spam a lot of shepherds
+                    Invoke("ResetCooldown", 0.5f);
+                    cooldown = true;
 
-                // Don't let the user spam a lot of shepherds
-                Invoke("ResetCooldown", 0.5f);
-                cooldown = true;
+                    // The new vertex
+                    var me = new Vector2(objectPos.x, objectPos.y);
 
-                // The new vertex
-                var me = new Vector2(objectPos.x, objectPos.y);
+                    // store owner of vertex
+                    m_ownership.Add(me, shepherdColour1 ? EOwnership.PLAYER1 :
+                        shepherdColour2 ? EOwnership.PLAYER2 :  shepherdColour3 ? EOwnership.PLAYER3 : EOwnership.PLAYER4);
 
-                // store owner of vertex
-                m_ownership.Add(me, shepherdColour1 ? EOwnership.PLAYER1 :
-                    shepherdColour2 ? EOwnership.PLAYER2 :  shepherdColour3 ? EOwnership.PLAYER3 : EOwnership.PLAYER4);
 
-                //Add vertex to the triangulation and update the voronoi
-                Delaunay.AddVertex(m_delaunay, me);
-                m_dcel = Voronoi.Create(m_delaunay);
+                    //Add vertex to the triangulation and update the voronoi
+                    Delaunay.AddVertex(m_delaunay, me);
+                    m_delaunay.SetOwner(me, m_activeShepherd);//shepherdColour1 ? EOwnership.PLAYER1 :
+                        //shepherdColour2 ? EOwnership.PLAYER2 :  shepherdColour3 ? EOwnership.PLAYER3 : EOwnership.PLAYER4)
+                
+                    m_dcel = Voronoi.Create(m_delaunay);
 
-                UpdateMesh();
+                    UpdateMesh();
 
-                // Test: draw a square of random color next to placed sheep
-                //m_dcel = new DCEL();
-                //var v1 = m_dcel.AddVertex(new Vector2(objectPos.x, objectPos.y));
-                //var v2 = m_dcel.AddVertex(new Vector2(objectPos.x + 1, objectPos.y));
-                //var v3 = m_dcel.AddVertex(new Vector2(objectPos.x + 1, objectPos.y + 1));
-                //var v4 = m_dcel.AddVertex(new Vector2(objectPos.x, objectPos.y + 1));
+                    // Test: draw a square of random color next to placed sheep
+                    //m_dcel = new DCEL();
+                    //var v1 = m_dcel.AddVertex(new Vector2(objectPos.x, objectPos.y));
+                    //var v2 = m_dcel.AddVertex(new Vector2(objectPos.x + 1, objectPos.y));
+                    //var v3 = m_dcel.AddVertex(new Vector2(objectPos.x + 1, objectPos.y + 1));
+                    //var v4 = m_dcel.AddVertex(new Vector2(objectPos.x, objectPos.y + 1));
 
-                //m_dcel.AddEdge(v1, v2);
-                //m_dcel.AddEdge(v2, v3);
-                //m_dcel.AddEdge(v3, v4);
-                // HalfEdge e1 = m_dcel.AddEdge(v4, v1);
+                    //m_dcel.AddEdge(v1, v2);
+                    //m_dcel.AddEdge(v2, v3);
+                    //m_dcel.AddEdge(v3, v4);
+                    // HalfEdge e1 = m_dcel.AddEdge(v4, v1);
 
-                //e1.Twin.Face.owner = rd.Next(4);
+                    //e1.Twin.Face.owner = rd.Next(4);
 
+                }
+                
             }
         }
 
         private void ResetCooldown() {
             cooldown = false;
+        }
+
+        public void SetActiveShepherd(int owner) {
+            m_activeShepherd = owner;
         }
 
         // Anne
@@ -132,6 +148,7 @@ namespace Shepherd
 
             m_levelSolved = false;
             m_restartLevel = false;
+            m_activeShepherd = 1;
 
             var level = m_levels[m_levelCounter];
 

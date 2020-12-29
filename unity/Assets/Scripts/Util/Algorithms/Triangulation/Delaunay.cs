@@ -1,10 +1,11 @@
-﻿namespace Util.Algorithms.Triangulation
+namespace Util.Algorithms.Triangulation
 {
     using System.Collections.Generic;
     using System.Linq;
     using UnityEngine;
     using Util.Geometry;
     using Util.Geometry.Triangulation;
+    using Shepherd;
 
     /// <summary>
     /// Collection of algorithms related to Delaunay triangulation.
@@ -24,7 +25,12 @@
             var v1 = new Vector2(0, m_farAway);
             var v2 = new Vector2(m_farAway, -m_farAway);
 
-            return new Triangulation(v0, v1, v2);
+            Triangulation del = new Triangulation(v0, v1, v2);
+            foreach (Vector2 v in new List<Vector2>(){v0, v1, v2}){
+                del.SetOwner(v, 0);
+            }
+
+            return del;
         }
 
         /// <summary>

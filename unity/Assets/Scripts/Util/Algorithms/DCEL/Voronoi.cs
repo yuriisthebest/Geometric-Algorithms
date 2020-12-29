@@ -1,4 +1,4 @@
-﻿namespace Util.Algorithms.DCEL
+namespace Util.Algorithms.DCEL
 {
     using System.Collections.Generic;
     using UnityEngine;
@@ -70,7 +70,10 @@
                     var v1 = vertexMap[edge.T];
                     var v2 = vertexMap[edge.Twin.T];
 
-                    dcel.AddEdge(v1, v2);
+                    HalfEdge e1 = dcel.AddEdge(v1, v2);
+
+                    e1.Twin.Face.owner = m_Delaunay.GetOwner(edge.Point1);
+                    e1.Face.owner = m_Delaunay.GetOwner(edge.Point2);
 
                     edgesVisited.Add(edge);
                     edgesVisited.Add(edge.Twin);
