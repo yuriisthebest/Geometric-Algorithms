@@ -1,4 +1,4 @@
-﻿namespace Shepherd
+namespace Shepherd
 {
     using General.Controller;
     using General.Menu;
@@ -97,7 +97,7 @@
                     shepherdColour2 ? EOwnership.PLAYER2 :  shepherdColour3 ? EOwnership.PLAYER3 : EOwnership.PLAYER4);
 
                 //Add vertex to the triangulation and update the voronoi
-                m_delaunay.AddVertex(me);
+                Delaunay.AddVertex(m_delaunay, me);
                 m_dcel = Voronoi.Create(m_delaunay);
 
                 UpdateMesh();
