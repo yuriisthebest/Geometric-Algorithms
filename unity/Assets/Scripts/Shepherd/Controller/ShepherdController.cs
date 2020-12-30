@@ -49,7 +49,7 @@ namespace Shepherd
         private bool m_levelSolved;
         private bool m_restartLevel;
 
-        private static List<Color> Colors = new List<Color> {Color.red, Color.green, Color.yellow, Color.blue};
+        private static List<Color> Colors = new List<Color>(){Color.red, new Color(0f, 0.6f, 0f), Color.yellow, new Color(0f, 0.4f, 1f)};
 
         private Dictionary<Vector2, int> shepherdLocs = new Dictionary<Vector2, int>();
 
@@ -82,7 +82,7 @@ namespace Shepherd
 
         void Update()
         {
-            // Add a shepherd to the game when the user clicks
+            // Handle mouse clicks
             if (Input.GetMouseButtonDown(0)) {
                 // Cast a ray, get everything it hits
                 RaycastHit2D[] hit = Physics2D.RaycastAll(Camera.main.ScreenToWorldPoint(Input.mousePosition), Vector2.zero, Mathf.Infinity);

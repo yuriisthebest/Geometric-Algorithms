@@ -271,10 +271,10 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 5091a51729ec6bf40bb870531bd66fb6, type: 2}
-  - {fileID: 2100000, guid: 7effa1191b216884c831c969a0af6abd, type: 2}
-  - {fileID: 2100000, guid: 0f40d78c4e39f3e4788002e38bd13df8, type: 2}
-  - {fileID: 2100000, guid: c13a0ff426c83b04f8b7ec813247bd3f, type: 2}
+  - {fileID: 2100000, guid: 861cb83904c2aa34a9d56f342db90480, type: 2}
+  - {fileID: 2100000, guid: cfa54d1659de08e4daa637bda01d7a30, type: 2}
+  - {fileID: 2100000, guid: f1fa50c4dc8eee14897066f026ec2fd3, type: 2}
+  - {fileID: 2100000, guid: 32d5edd7ad455bc42ad0ea4a4ce53f5b, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -418,7 +418,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0.36830688, b: 1, a: 1}
+  m_Color: {r: 0, g: 0.39215687, b: 1, a: 1}
   m_RaycastTarget: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
@@ -595,7 +595,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0.5566038, b: 0, a: 1}
+  m_Color: {r: 0, g: 0.5882353, b: 0, a: 1}
   m_RaycastTarget: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
