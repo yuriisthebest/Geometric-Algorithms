@@ -44,6 +44,9 @@ namespace Shepherd
         [SerializeField]
         private int m_activeShepherd = 0;
 
+        [SerializeField]
+        private GameObject selection;
+
         private List<GameObject> m_sheep = new List<GameObject>();
 
         private bool m_levelSolved;
@@ -52,6 +55,8 @@ namespace Shepherd
         private static List<Color> Colors = new List<Color>(){Color.red, new Color(0f, 0.6f, 0f), Color.yellow, new Color(0f, 0.4f, 1f)};
 
         private Dictionary<Vector2, int> shepherdLocs = new Dictionary<Vector2, int>();
+
+        private List<Vector3> buttonLocs;
 
         public GameObject shepherd;
         
@@ -78,6 +83,12 @@ namespace Shepherd
         {
             InitLevel();
             StartVoronoi();
+            buttonLocs = new List<Vector3>() {
+                GameObject.Find("RedShep").transform.position,
+                GameObject.Find("GrnShep").transform.position,
+                GameObject.Find("YelShep").transform.position,
+                GameObject.Find("BluShep").transform.position
+            };
         }
 
         void Update()
@@ -91,7 +102,6 @@ namespace Shepherd
                 {
                     // Grab the top hit GameObject
                     GameObject lastHitObject = hit[hit.Length - 1].collider.gameObject;
-                    Debug.Log("Hit " + lastHitObject.name);
                     if (lastHitObject.name == "shepherd(Clone)")
                     {
                         shepherdLocs.Remove(lastHitObject.transform.position);
@@ -141,6 +151,7 @@ namespace Shepherd
 
         public void SetActiveShepherd(int owner) {
             m_activeShepherd = owner;
+            selection.transform.position = buttonLocs[owner];
         }
 
         // Anne
@@ -152,7 +163,7 @@ namespace Shepherd
 
             m_levelSolved = false;
             m_restartLevel = false;
-            m_activeShepherd = 1;
+            m_activeShepherd = 0;
 
             var level = m_levels[m_levelCounter];
 
@@ -166,6 +177,7 @@ namespace Shepherd
                 sr.color = Colors[type];
                 m_sheep.Add(obj);
             }
+            
 
             m_dcel = new DCEL();
         }
