@@ -25,6 +25,7 @@ public class VerticalDecomposition
         // Create initial trapezoid and root of searchtree
         Trapezoid inital_trapezoid = new Trapezoid(new Vector2(bottomLeft.x, topRight.z), new Vector2(topRight.x, bottomLeft.z), top, bottom);
         this.TreeRoot = new SearchNode(inital_trapezoid);
+        inital_trapezoid.SetLeaf(TreeRoot);
 
         // *** Add all edges to the vertical decomposition ***
         // TODO Randomize the collection of half-edges
@@ -39,6 +40,7 @@ public class VerticalDecomposition
             if (edge.To.Pos.x < edge.From.Pos.x) { continue; }
             if (edge.To.Pos.x == edge.From.Pos.x && edge.To.Pos.y <= edge.From.Pos.y) { continue; }
             LineSegment segment = new LineSegment(edge.From.Pos, edge.To.Pos, edge.Face);
+            Debug.Log("Inserting segment: " + segment.show());
             this.Insert(segment);
         }
     }
@@ -87,17 +89,19 @@ public class VerticalDecomposition
     public Trapezoid Search(Vector2 pos)
     {
         // Start the recursive search on the root of the searchtree
+        Debug.Log(" --- Start search on position " + pos + " ---");
         return this.Search(pos, this.TreeRoot);
     }
 
     // Recursive function to search the tree structure for the proper trapezoid
     private Trapezoid Search(Vector2 pos, SearchNode root)
     {
-        SearchNode node = root.Test(pos);
-        if (node.isLeaf)
+        root.show_children();
+        if (root.isLeaf)
         {
-            return node.leaf;
+            return root.leaf;
         }
+        SearchNode node = root.Test(pos);
         return this.Search(pos, node);
     }
 
@@ -112,24 +116,29 @@ public class VerticalDecomposition
     {
         // Find all trapezoids intersecting the segment
         List<Trapezoid> Intersecting = new List<Trapezoid>();
-        Trapezoid CurrentTrapezoid = this.Search(seg.point1, this.TreeRoot);
+        Trapezoid CurrentTrapezoid = this.Search(seg.point1);
         Intersecting.Add(CurrentTrapezoid);
-        while (seg.point2.x > CurrentTrapezoid.right.x)
+        while (seg.point2.x > CurrentTrapezoid.right.x && CurrentTrapezoid.Neighbors.Count > 0)
         {
             // Check neighbors to find if there are one or two neighbors, will return a list with one or two entries
             List<Trapezoid> RightNeighbors = CurrentTrapezoid.Neighbors.FindAll(
                 delegate (Trapezoid trap)
                 {
-                    return !(trap.right.x < CurrentTrapezoid.right.x);
+                    return (trap.right.x > CurrentTrapezoid.right.x);
                 });
             // If there is only one neighbor, it is the new trapezoid, else check which one is
-            if (RightNeighbors.Count == 1)
+            if (RightNeighbors.Count == 0)
+            {
+                Debug.Log("Detected trapezoid that is not the right most trapezoid, but has no right neighbors");
+                break;
+            }
+            else if (RightNeighbors.Count == 1)
             {
                 CurrentTrapezoid = RightNeighbors[0];
             }
-            else
+            else if (RightNeighbors.Count > 1)
             {
-                if (RightNeighbors.Count != 2) { throw new System.IndexOutOfRangeException(); }
+                if (RightNeighbors.Count != 2) { throw new System.IndexOutOfRangeException("A trapezoid cannot have more than 2 right neighbors, says it has: " + RightNeighbors.Count); }
                 // Report upper or lower, and find which one it is
                 // If the segment is above the right point of the current trapezoid, then the next trapezoid is the above neighbor, else the lower neighbor
                 if (seg.Above(CurrentTrapezoid.right))
@@ -162,6 +171,12 @@ public class VerticalDecomposition
                 }
             }
             Intersecting.Add(CurrentTrapezoid);
+            Debug.Log("Adding " + CurrentTrapezoid.show());
+            Debug.Log("Amount of found intersecting trapezoids: " + Intersecting.Count);
+            if (Intersecting.Count > 100)
+            {
+                break;
+            }
         }
         return Intersecting;
     }
@@ -219,10 +234,16 @@ public class VerticalDecomposition
                 newUpper = new Trapezoid(seg.point1, seg.point2, toSplit[i].top, seg);
                 newLower = new Trapezoid(seg.point1, seg.point2, seg, toSplit[i].bottom);
             }
-            newUpper.AddNeighbor(oldUpper);
-            oldUpper.AddNeighbor(newUpper);
-            newLower.AddNeighbor(oldLower);
-            oldLower.AddNeighbor(newLower);
+            if (oldUpper != null)
+            {
+                newUpper.AddNeighbor(oldUpper);
+                oldUpper.AddNeighbor(newUpper);
+            }
+            if (oldLower != null)
+            {
+                newLower.AddNeighbor(oldLower);
+                oldLower.AddNeighbor(newLower);
+            }
             // Every existing neighbor of the old trapezoid is either replaced (also intersected) or is a neighbor to the new top or lower
             foreach (Trapezoid neighbor in toSplit[i].Neighbors)
             {
@@ -267,6 +288,7 @@ public class VerticalDecomposition
                     }
                 }
             }
+            Debug.Log("CreatingTraps: " + newUpper.show() + " AND " + newLower.show());
             newTrapezoids.Add(newUpper);
             newTrapezoids.Add(newLower);
             // Point the old trapezoid to the replacements
@@ -375,39 +397,60 @@ public class VerticalDecomposition
     }
 
     /*
-     * Modify the search tree by chaning old leafs and adding new leafs and internal nodes
+     * Modify the search tree by changing old leafs and adding new leafs and internal nodes
      * 
      * Handle the first and last node separately, because they might have created 3 new trapezoids
      */
      private void UpdateSearchTree(List<SearchNode> OldLeafs, List<SearchNode> NewLeafs, LineSegment segment)
     {
+        // *** Case when segment intersects only one trapezoid
+        // This case is only special when it does not touch either side of the trapezoid but is fully contained
+        //  If it is not special, only 2 or 3 trapezoids are created which can be done with the regular code
+        if (OldLeafs.Count == 1 && NewLeafs.Count == 4)
+        {
+            // Replace leaf with an x-node
+            // That x-node has a leaf and x-node as left and right child
+            // The second x-node has a y-node and leaf as left and right child
+            // The y-node has two leafs
+            SearchNode x2node = new SearchNode(segment.point2);
+            SearchNode ynode = new SearchNode(segment);
+            OldLeafs[0].setChildren(NewLeafs[0], x2node, "Special case UST");
+            x2node.setChildren(ynode, NewLeafs[3], "Special case UST");
+            ynode.setChildren(NewLeafs[1], NewLeafs[2], "Special case UST");
+            OldLeafs[0].update(segment.point1);
+            return;
+        }
+        // *** Case when segment intersects many trapezoids ***
         // If there are trapezoids to the left or right of the segment, then those old trapezoids have special treatment and are not included in the loop
         int start = 0;
         int end = 0;
         // Check if the first old trapezoid contains the left segment point or if that point equals the left point of that trapezoid
-        if (OldLeafs[0].leaf.left != segment.point1)
+        if (OldLeafs[0].leaf.left.x != segment.point1.x)
         {
             // replace the leaf with an x-node for the left endpoint of segment and a y-node for the segment
             //  The first leaf in NewLeafs will be the trapezoid to the left of the segment (thus left child of previous leaf)
             SearchNode node = new SearchNode(segment);
-            OldLeafs[0].leftChild = NewLeafs[0];
-            OldLeafs[0].rightChild = node;
-            node.leftChild = this.FindLowerReplacement(OldLeafs[0].leaf).leaf; // lower leaf
-            node.rightChild = this.FindUpperReplacement(OldLeafs[0].leaf).leaf; // upper leaf
+            OldLeafs[0].setChildren(NewLeafs[0], node, "First trapezoid UST");
+            node.setChildren(this.FindLowerReplacement(OldLeafs[0].leaf).leaf, // lower leaf
+                this.FindUpperReplacement(OldLeafs[0].leaf).leaf, "First trapezoid UST"); // upper leaf
             OldLeafs[0].update(segment.point1);
             // Skip the first iteration of the replacement loop since the leaf of the first trapezoid has already been updated
             start = 1;
         }
         // Check if the last old trapezoid contains the right segment point or if that point equals the right point of that trapezoid
-        if (OldLeafs[OldLeafs.Count-1].leaf.right != segment.point2)
+        //  In case when only 1 trap is intersected, AND there are only 3 trapezoids created, AND there is space between segment and left wall of trapezoid
+        //  then Oldleafs[0] == Oldleafs[count-1] and oldleafs[0].leaf has already been changed, so this check does not need to happen
+        Debug.Log(OldLeafs.Count);
+        Debug.Log(OldLeafs[OldLeafs.Count - 1].show());
+        if (OldLeafs[OldLeafs.Count-1].isLeaf && OldLeafs[OldLeafs.Count-1].leaf.right.x != segment.point2.x)
         {
             // replace the leaf with an x-node for the left endpoint of segment and a y-node for the segment
             //  The last leaf in NewLeafs will be the trapezoid to the right of the segment (thus right child of previous leaf)
             SearchNode node = new SearchNode(segment);
-            OldLeafs[OldLeafs.Count - 1].leftChild = node;
-            OldLeafs[OldLeafs.Count - 1].rightChild = NewLeafs[NewLeafs.Count - 1];
-            node.leftChild = this.FindLowerReplacement(OldLeafs[OldLeafs.Count - 1].leaf).leaf; // lower leaf
-            node.rightChild = this.FindUpperReplacement(OldLeafs[OldLeafs.Count - 1].leaf).leaf; // upper leaf
+            OldLeafs[OldLeafs.Count - 1].setChildren(node, NewLeafs[NewLeafs.Count - 1], "Last trapezoid USt");
+            node.setChildren(this.FindLowerReplacement(OldLeafs[OldLeafs.Count - 1].leaf).leaf, // lower leaf
+                this.FindUpperReplacement(OldLeafs[OldLeafs.Count - 1].leaf).leaf, // upper leaf
+                "Last trapezoid UST");
             OldLeafs[OldLeafs.Count - 1].update(segment.point2);
             // Skip the last iteration of the replacement loop since the leaf of the last trapezoid has alreadt been updated
             end = 1;
@@ -417,8 +460,7 @@ public class VerticalDecomposition
         // Each other leaf is replaced by Y-nodes with the segment, with the lower and upper leafs as childs
         for (int i = start; i < OldLeafs.Count - end; i++)
         {
-            OldLeafs[i].leftChild = this.FindLowerReplacement(OldLeafs[i].leaf).leaf;
-            OldLeafs[i].rightChild = this.FindUpperReplacement(OldLeafs[i].leaf).leaf;
+            OldLeafs[i].setChildren(this.FindLowerReplacement(OldLeafs[i].leaf).leaf, this.FindUpperReplacement(OldLeafs[i].leaf).leaf, "General trapezoid UST");
             OldLeafs[i].update(segment);
         }
     }
@@ -448,7 +490,7 @@ public class Trapezoid
     public LineSegment bottom;
     public Vector2 left;
     public Vector2 right;
-    public List<Trapezoid> Neighbors;
+    public List<Trapezoid> Neighbors = new List<Trapezoid>();
     public SearchNode leaf;
     // Once a trapezoid is set to be replaced, store pointers to the trapezoids it will be replaced by here
     public Trapezoid LowerReplacement;
@@ -504,6 +546,15 @@ public class Trapezoid
         if (neighbor == null) { return; }
         this.Neighbors.Remove(neighbor);
     }
+
+    /*
+     * Print the trapezoid
+     */
+     public string show()
+    {
+        return ("Trapezoid (Neighbors = " + this.Neighbors.Count + ") with segments: " + this.top.show() + " and " + this.bottom.show()
+            + ". Endpoints: " + "(" + this.left.x + ", " + this.left.y + ") and (" + this.right.x + ", " + this.right.y + ")");
+    }
 }
 
 /*
@@ -543,6 +594,12 @@ public class LineSegment
         if (this.point1.x > point.x || this.point2.x < point.x) { return false; }
         float slope = (this.point1.y - this.point2.y) / (this.point1.x - this.point2.x);
         return (point.y > this.point1.y + (point.x - this.point1.x) * slope);
+    }
+
+    // Print the segment points
+    public string show()
+    {
+        return "(" + this.point1.x + ", " + this.point1.y + "), (" + this.point2.x + ", " + this.point2.y + ")";
     }
 
 }
@@ -616,12 +673,30 @@ public class SearchNode
         storeY = segment;
     }
 
+    /*
+     * Set the childern of searchnodes
+     */
+     public void setChildren(SearchNode left, SearchNode right, string source)
+    {
+        if (left == null || right == null)
+        {
+            throw new System.Exception("Leaf was updated without proper children at '" + source + "': "
+                + this.show() + ". Children: "
+                + ((left != null) ? left.show() : "null") + " --- "
+                + ((right != null) ? right.show() : "null"));
+        }
+        this.leftChild = left;
+        this.rightChild = right;
+    }
+
 
     /*
      * Return the left or right child of the node depending a given position and the stored component
      */
     public SearchNode Test(Vector2 pos)
     {
+        //Debug.Log("Test for position: " + pos);
+        //Debug.Log(this.show());
         if (isXNode)
         {
             // If point is left of endpoint, return left child.
@@ -637,7 +712,7 @@ public class SearchNode
             // TODO LineSegment now has this test as a method (above = true, below / on = false), don't know if I want to use that one
             // If point is below the segment, return left
             //  slope = diffY / diffX
-            //  below = pos.y < (pos.x - smallest x) * slope + y of smallest x
+            //  below == pos.y < (pos.x - smallest x) * slope + y of smallest x
             float slope = (storeY.point1.y - storeY.point2.y) / (storeY.point1.x - storeY.point2.x);
             if (pos.y < storeY.point1.y + (pos.x - storeY.point1.x) * slope)
             {
@@ -647,5 +722,37 @@ public class SearchNode
                 return rightChild;
             }
         }
+    }
+
+    public string show()
+    {
+        if (this.isLeaf)
+        {
+            return "Leafnode with " + this.leaf.show();
+        }
+        else if (this.isXNode)
+        {
+            return "Xnode with endpoint: (" + this.storeX.x + ", " + this.storeX.y + ")";
+        }
+        else
+        {
+            return "Ynode with segment: " + this.storeY.show();
+        }
+    }
+
+    public void show_children()
+    {
+        Debug.Log(this.show());
+        string left = "null";
+        string right = "null";
+        if (this.leftChild != null)
+        {
+            left = this.leftChild.show();
+        }
+        if (this.rightChild != null)
+        {
+            right = this.rightChild.show();
+        }
+        Debug.Log(left + " --- " + right);
     }
 }

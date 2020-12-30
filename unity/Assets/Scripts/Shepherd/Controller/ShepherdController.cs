@@ -102,6 +102,9 @@ namespace Shepherd
 
                 UpdateMesh();
 
+                VerticalDecomposition vd = VertDecomp(m_dcel);
+                print("The current solution is " + (CheckSolution(vd) ? "correct!" : "wrong!"));
+
                 // Test: draw a square of random color next to placed sheep
                 //m_dcel = new DCEL();
                 //var v1 = m_dcel.AddVertex(new Vector2(objectPos.x, objectPos.y));
