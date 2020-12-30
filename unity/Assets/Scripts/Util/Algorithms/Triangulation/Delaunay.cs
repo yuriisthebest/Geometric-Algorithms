@@ -107,6 +107,20 @@ namespace Util.Algorithms.Triangulation
             LegalizeEdge(T, a_vertex, triangle.E2);
         }
 
+        public static Triangulation RemoveVertex(Triangulation T, Vector2 a_vertex)
+        {
+            //T.RemoveInitialTriangle();
+            IEnumerable<Vector2> newVertices = T.Vertices;
+
+            if (!newVertices.Contains(a_vertex)) {
+                throw new GeomException("Vertex to remove not in triangulation");
+            }
+
+            newVertices = newVertices.Where(v => v != a_vertex).ToList();
+
+            return Delaunay.Create(newVertices);
+        }
+
         /// <summary>
         /// Makes an edge legal accorinding to the Delaunay condition.
         /// Recurses whenever flipping an edge since adjacent edges can be made illegal.

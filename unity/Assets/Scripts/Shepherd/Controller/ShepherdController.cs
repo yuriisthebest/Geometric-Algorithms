@@ -51,9 +51,9 @@ namespace Shepherd
 
         private static List<Color> Colors = new List<Color> {Color.red, Color.green, Color.yellow, Color.blue};
 
-        public GameObject shepherd;
-        private bool cooldown = false;
+        private Dictionary<Vector2, int> shepherdLocs = new Dictionary<Vector2, int>();
 
+        public GameObject shepherd;
         
         private bool shepherdColour1 = true;
         private bool shepherdColour2;
@@ -61,7 +61,7 @@ namespace Shepherd
         private bool shepherdColour4;
 
         // mapping of vertices to ownership enum
-        private readonly Dictionary<Vector2, EOwnership> m_ownership = new Dictionary<Vector2, EOwnership>();
+        private readonly Dictionary<Vector2, int> m_ownership = new Dictionary<Vector2, int>();
 
         // Voronoi objects
         private Triangulation m_delaunay;
@@ -83,57 +83,61 @@ namespace Shepherd
         void Update()
         {
             // Add a shepherd to the game when the user clicks
-            if (Input.GetMouseButton(0) && !cooldown) {
-                var mousePos = Input.mousePosition;
-                if (mousePos.y > 75) {
-                    mousePos.z = 2.0f;
-                    var objectPos = Camera.main.ScreenToWorldPoint(mousePos);
-                    var obj = Instantiate(shepherd, objectPos, Quaternion.identity);
-                    SpriteRenderer sr = obj.GetComponent<SpriteRenderer>();
-                    sr.color = Colors[m_activeShepherd];
-                    // Don't let the user spam a lot of shepherds
-                    Invoke("ResetCooldown", 0.5f);
-                    cooldown = true;
+            if (Input.GetMouseButtonDown(0)) {
+                // Cast a ray, get everything it hits
+                RaycastHit2D[] hit = Physics2D.RaycastAll(Camera.main.ScreenToWorldPoint(Input.mousePosition), Vector2.zero, Mathf.Infinity);
 
-                    // The new vertex
-                    var me = new Vector2(objectPos.x, objectPos.y);
+                if (hit.Length > 0)
+                {
+                    // Grab the top hit GameObject
+                    GameObject lastHitObject = hit[hit.Length - 1].collider.gameObject;
+                    Debug.Log("Hit " + lastHitObject.name);
+                    if (lastHitObject.name == "shepherd(Clone)")
+                    {
+                        shepherdLocs.Remove(lastHitObject.transform.position);
 
-                    // store owner of vertex
-                    m_ownership.Add(me, shepherdColour1 ? EOwnership.PLAYER1 :
-                        shepherdColour2 ? EOwnership.PLAYER2 :  shepherdColour3 ? EOwnership.PLAYER3 : EOwnership.PLAYER4);
+                        m_delaunay = Delaunay.Create();
+                        foreach (KeyValuePair<Vector2, int> o in shepherdLocs)
+                        {
+                            Delaunay.AddVertex(m_delaunay, o.Key);
+                            m_delaunay.SetOwner(o.Key, o.Value);
+                        }
+                        m_dcel = Voronoi.Create(m_delaunay);
 
+                        UpdateMesh();
 
-                    //Add vertex to the triangulation and update the voronoi
-                    Delaunay.AddVertex(m_delaunay, me);
-                    m_delaunay.SetOwner(me, m_activeShepherd);//shepherdColour1 ? EOwnership.PLAYER1 :
-                        //shepherdColour2 ? EOwnership.PLAYER2 :  shepherdColour3 ? EOwnership.PLAYER3 : EOwnership.PLAYER4)
-                
-                    m_dcel = Voronoi.Create(m_delaunay);
-
-                    UpdateMesh();
-
-                    // Test: draw a square of random color next to placed sheep
-                    //m_dcel = new DCEL();
-                    //var v1 = m_dcel.AddVertex(new Vector2(objectPos.x, objectPos.y));
-                    //var v2 = m_dcel.AddVertex(new Vector2(objectPos.x + 1, objectPos.y));
-                    //var v3 = m_dcel.AddVertex(new Vector2(objectPos.x + 1, objectPos.y + 1));
-                    //var v4 = m_dcel.AddVertex(new Vector2(objectPos.x, objectPos.y + 1));
-
-                    //m_dcel.AddEdge(v1, v2);
-                    //m_dcel.AddEdge(v2, v3);
-                    //m_dcel.AddEdge(v3, v4);
-                    // HalfEdge e1 = m_dcel.AddEdge(v4, v1);
-
-                    //e1.Twin.Face.owner = rd.Next(4);
-
+                        Destroy(lastHitObject);
+                    }
                 }
+                else {
+                    var mousePos = Input.mousePosition;
+                    if (mousePos.y > 100) {
+                        mousePos.z = 2.0f;
+                        var objectPos = Camera.main.ScreenToWorldPoint(mousePos);
+                        var obj = Instantiate(shepherd, objectPos, Quaternion.identity);
+                        SpriteRenderer sr = obj.GetComponent<SpriteRenderer>();
+                        sr.color = Colors[m_activeShepherd];
+
+                        // The new vertex
+                        var me = new Vector2(objectPos.x, objectPos.y);
+
+                        // store owner of vertex
+                        shepherdLocs.Add(me, m_activeShepherd);
+
+
+                        //Add vertex to the triangulation and update the voronoi
+                        Delaunay.AddVertex(m_delaunay, me);
+                        m_delaunay.SetOwner(me, m_activeShepherd);//shepherdColour1 ? EOwnership.PLAYER1 :
+                            //shepherdColour2 ? EOwnership.PLAYER2 :  shepherdColour3 ? EOwnership.PLAYER3 : EOwnership.PLAYER4)
                 
+                        m_dcel = Voronoi.Create(m_delaunay);
+
+                        UpdateMesh();
+                    }
+                }       
             }
         }
 
-        private void ResetCooldown() {
-            cooldown = false;
-        }
 
         public void SetActiveShepherd(int owner) {
             m_activeShepherd = owner;
@@ -221,7 +225,7 @@ namespace Shepherd
             // add auxiliary vertices as unowned
             foreach (var vertex in m_delaunay.Vertices)
             {
-                m_ownership.Add(vertex, EOwnership.UNOWNED);
+                m_ownership.Add(vertex, 0);
             }
 
             // create polygon of rectangle window for intersection with voronoi
