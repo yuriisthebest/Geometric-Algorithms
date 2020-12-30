@@ -1,10 +1,11 @@
-﻿namespace Util.Algorithms.Triangulation
+namespace Util.Algorithms.Triangulation
 {
     using System.Collections.Generic;
     using System.Linq;
     using UnityEngine;
     using Util.Geometry;
     using Util.Geometry.Triangulation;
+    using Shepherd;
 
     /// <summary>
     /// Collection of algorithms related to Delaunay triangulation.
@@ -24,7 +25,12 @@
             var v1 = new Vector2(0, m_farAway);
             var v2 = new Vector2(m_farAway, -m_farAway);
 
-            return new Triangulation(v0, v1, v2);
+            Triangulation del = new Triangulation(v0, v1, v2);
+            foreach (Vector2 v in new List<Vector2>(){v0, v1, v2}){
+                del.SetOwner(v, 0);
+            }
+
+            return del;
         }
 
         /// <summary>
@@ -99,6 +105,20 @@
             LegalizeEdge(T, a_vertex, triangle.E0);
             LegalizeEdge(T, a_vertex, triangle.E1);
             LegalizeEdge(T, a_vertex, triangle.E2);
+        }
+
+        public static Triangulation RemoveVertex(Triangulation T, Vector2 a_vertex)
+        {
+            //T.RemoveInitialTriangle();
+            IEnumerable<Vector2> newVertices = T.Vertices;
+
+            if (!newVertices.Contains(a_vertex)) {
+                throw new GeomException("Vertex to remove not in triangulation");
+            }
+
+            newVertices = newVertices.Where(v => v != a_vertex).ToList();
+
+            return Delaunay.Create(newVertices);
         }
 
         /// <summary>

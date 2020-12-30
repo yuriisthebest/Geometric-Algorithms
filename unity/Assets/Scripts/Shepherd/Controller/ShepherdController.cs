@@ -7,6 +7,7 @@ namespace Shepherd
     using UnityEngine;
     using UnityEngine.SceneManagement;
     using UnityEngine.UI;
+    using UnityEngine.EventSystems;
     using Util.Algorithms.DCEL;
     using Util.Geometry;
     using Util.Geometry.DCEL;
@@ -15,6 +16,16 @@ namespace Shepherd
     using Util.Geometry.Triangulation;
     using Util.Algorithms.Triangulation;
     using Voronoi;
+
+    // Shepherd ownership
+    public enum EOwnership
+    {
+        UNOWNED,
+        PLAYER1,
+        PLAYER2,
+        PLAYER3,
+        PLAYER4
+    }
 
     public class ShepherdController : MonoBehaviour, IController
     {
@@ -29,35 +40,37 @@ namespace Shepherd
         [SerializeField]
         private MeshFilter m_meshFilter;
 
-        
+        [SerializeField]
         private int m_levelCounter = 0;
+        [SerializeField]
+        private int m_activeShepherd = 0;
+
+        [SerializeField]
+        private GameObject selection;
+
+        public Text text;
 
         private List<GameObject> m_sheep = new List<GameObject>();
+        private List<GameObject> m_shepherds = new List<GameObject>();
 
         private bool m_levelSolved;
         private bool m_restartLevel;
 
-        private static List<Color> Colors = new List<Color> {Color.red, Color.green, Color.yellow, Color.blue};
+        private static List<Color> Colors = new List<Color>(){Color.red, new Color(0f, 0.6f, 0f), Color.yellow, new Color(0f, 0.4f, 1f)};
+
+        private Dictionary<Vector2, int> shepherdLocs = new Dictionary<Vector2, int>();
+
+        private List<Vector3> buttonLocs;
 
         public GameObject shepherd;
-        private bool cooldown = false;
-
-        // Shepherd ownership
-        private enum EOwnership
-        {
-            UNOWNED,
-            PLAYER1,
-            PLAYER2,
-            PLAYER3,
-            PLAYER4
-        }
+        
         private bool shepherdColour1 = true;
         private bool shepherdColour2;
         private bool shepherdColour3;
         private bool shepherdColour4;
 
         // mapping of vertices to ownership enum
-        private readonly Dictionary<Vector2, EOwnership> m_ownership = new Dictionary<Vector2, EOwnership>();
+        private readonly Dictionary<Vector2, int> m_ownership = new Dictionary<Vector2, int>();
 
         // Voronoi objects
         private Triangulation m_delaunay;
@@ -73,70 +86,99 @@ namespace Shepherd
         void Start()
         {
             InitLevel();
-            StartVoronoi();
+            buttonLocs = new List<Vector3>() {
+                GameObject.Find("RedShep").transform.position,
+                GameObject.Find("GrnShep").transform.position,
+                GameObject.Find("YelShep").transform.position,
+                GameObject.Find("BluShep").transform.position
+            };
         }
 
         void Update()
         {
-            // Add a shepherd to the game when the user clicks
-            if (Input.GetMouseButton(0) && !cooldown) {
-                var mousePos = Input.mousePosition;
-                mousePos.z = 2.0f;
-                var objectPos = Camera.main.ScreenToWorldPoint(mousePos);
-                Instantiate(shepherd, objectPos, Quaternion.identity);
+            // Handle mouse clicks
+            if (Input.GetMouseButtonDown(0)) {
+                // Cast a ray, get everything it hits
+                RaycastHit2D[] hit = Physics2D.RaycastAll(Camera.main.ScreenToWorldPoint(Input.mousePosition), Vector2.zero, Mathf.Infinity);
 
-                // Don't let the user spam a lot of shepherds
-                Invoke("ResetCooldown", 0.5f);
-                cooldown = true;
+                if (hit.Length > 0)
+                {
+                    // Grab the top hit GameObject
+                    GameObject lastHitObject = hit[hit.Length - 1].collider.gameObject;
+                    if (lastHitObject.name == "shepherd(Clone)")
+                    {
+                        m_shepherds.Remove(lastHitObject);
+                        shepherdLocs.Remove(lastHitObject.transform.position);
 
-                // The new vertex
-                var me = new Vector2(objectPos.x, objectPos.y);
+                        m_delaunay = Delaunay.Create();
+                        foreach (KeyValuePair<Vector2, int> o in shepherdLocs)
+                        {
+                            Delaunay.AddVertex(m_delaunay, o.Key);
+                            m_delaunay.SetOwner(o.Key, o.Value);
+                        }
+                        m_dcel = Voronoi.Create(m_delaunay);
 
-                // store owner of vertex
-                m_ownership.Add(me, shepherdColour1 ? EOwnership.PLAYER1 :
-                    shepherdColour2 ? EOwnership.PLAYER2 :  shepherdColour3 ? EOwnership.PLAYER3 : EOwnership.PLAYER4);
+                        UpdateMesh();
 
-                //Add vertex to the triangulation and update the voronoi
-                Delaunay.AddVertex(m_delaunay, me);
-                m_dcel = Voronoi.Create(m_delaunay);
+                        Destroy(lastHitObject);
+                    }
+                }
+                else {
+                    var mousePos = Input.mousePosition;
+                    if (!EventSystem.current.IsPointerOverGameObject()) {
+                        mousePos.z = 2.0f;
+                        var objectPos = Camera.main.ScreenToWorldPoint(mousePos);
+                        var obj = Instantiate(shepherd, objectPos, Quaternion.identity);
+                        SpriteRenderer sr = obj.GetComponent<SpriteRenderer>();
+                        sr.color = Colors[m_activeShepherd];
 
-                UpdateMesh();
+                        // The new vertex
+                        var me = new Vector2(objectPos.x, objectPos.y);
 
-                VerticalDecomposition vd = VertDecomp(m_dcel);
-                print("The current solution is " + (CheckSolution(vd) ? "correct!" : "wrong!"));
+                        // store owner of vertex
+                        shepherdLocs.Add(me, m_activeShepherd);
+                        m_shepherds.Add(obj);
 
-                // Test: draw a square of random color next to placed sheep
-                //m_dcel = new DCEL();
-                //var v1 = m_dcel.AddVertex(new Vector2(objectPos.x, objectPos.y));
-                //var v2 = m_dcel.AddVertex(new Vector2(objectPos.x + 1, objectPos.y));
-                //var v3 = m_dcel.AddVertex(new Vector2(objectPos.x + 1, objectPos.y + 1));
-                //var v4 = m_dcel.AddVertex(new Vector2(objectPos.x, objectPos.y + 1));
+                        //Add vertex to the triangulation and update the voronoi
+                        Delaunay.AddVertex(m_delaunay, me);
+                        m_delaunay.SetOwner(me, m_activeShepherd);//shepherdColour1 ? EOwnership.PLAYER1 :
+                            //shepherdColour2 ? EOwnership.PLAYER2 :  shepherdColour3 ? EOwnership.PLAYER3 : EOwnership.PLAYER4)
+                
+                        m_dcel = Voronoi.Create(m_delaunay);
 
-                //m_dcel.AddEdge(v1, v2);
-                //m_dcel.AddEdge(v2, v3);
-                //m_dcel.AddEdge(v3, v4);
-                // HalfEdge e1 = m_dcel.AddEdge(v4, v1);
+                        // Create vertical decomposition and check solution
+                        VerticalDecomposition vd = VertDecomp(m_dcel);
+                        print("The current solution is " + (CheckSolution(vd) ? "correct!" : "wrong!"));
 
-                //e1.Twin.Face.owner = rd.Next(4);
-
+                        UpdateMesh();
+                        
+                    }
+                }
+                text.text = "Shepherds: " + shepherdLocs.Count;
             }
         }
 
-        private void ResetCooldown() {
-            cooldown = false;
+
+        public void SetActiveShepherd(int owner) {
+            m_activeShepherd = owner;
+            selection.transform.position = buttonLocs[owner];
         }
 
         // Anne
         public void InitLevel()
         {
             foreach (var sheep in m_sheep) Destroy(sheep);
+            foreach (var shepherd in m_shepherds) Destroy(shepherd);
 
             m_sheep.Clear();
 
             m_levelSolved = false;
             m_restartLevel = false;
+            m_activeShepherd = 0;
 
             var level = m_levels[m_levelCounter];
+
+            shepherdLocs = new Dictionary<Vector2, int>();
 
             for (int i = 0; i < level.SheepList.Count; i++)
             {
@@ -148,8 +190,12 @@ namespace Shepherd
                 sr.color = Colors[type];
                 m_sheep.Add(obj);
             }
-
-            m_dcel = new DCEL();
+            
+            m_delaunay = Delaunay.Create();
+            m_dcel = Voronoi.Create(m_delaunay);
+            UpdateMesh();
+            text.text = "Shepherds: " + shepherdLocs.Count;
+            StartVoronoi();
         }
 
         /*
@@ -207,7 +253,7 @@ namespace Shepherd
             // add auxiliary vertices as unowned
             foreach (var vertex in m_delaunay.Vertices)
             {
-                m_ownership.Add(vertex, EOwnership.UNOWNED);
+                m_ownership.Add(vertex, 0);
             }
 
             // create polygon of rectangle window for intersection with voronoi
