@@ -7,6 +7,7 @@ namespace Shepherd
     using UnityEngine;
     using UnityEngine.SceneManagement;
     using UnityEngine.UI;
+    using UnityEngine.EventSystems;
     using Util.Algorithms.DCEL;
     using Util.Geometry;
     using Util.Geometry.DCEL;
@@ -47,7 +48,10 @@ namespace Shepherd
         [SerializeField]
         private GameObject selection;
 
+        public Text text;
+
         private List<GameObject> m_sheep = new List<GameObject>();
+        private List<GameObject> m_shepherds = new List<GameObject>();
 
         private bool m_levelSolved;
         private bool m_restartLevel;
@@ -82,7 +86,6 @@ namespace Shepherd
         void Start()
         {
             InitLevel();
-            StartVoronoi();
             buttonLocs = new List<Vector3>() {
                 GameObject.Find("RedShep").transform.position,
                 GameObject.Find("GrnShep").transform.position,
@@ -104,6 +107,7 @@ namespace Shepherd
                     GameObject lastHitObject = hit[hit.Length - 1].collider.gameObject;
                     if (lastHitObject.name == "shepherd(Clone)")
                     {
+                        m_shepherds.Remove(lastHitObject);
                         shepherdLocs.Remove(lastHitObject.transform.position);
 
                         m_delaunay = Delaunay.Create();
@@ -121,7 +125,7 @@ namespace Shepherd
                 }
                 else {
                     var mousePos = Input.mousePosition;
-                    if (mousePos.y > 100) {
+                    if (!EventSystem.current.IsPointerOverGameObject()) {
                         mousePos.z = 2.0f;
                         var objectPos = Camera.main.ScreenToWorldPoint(mousePos);
                         var obj = Instantiate(shepherd, objectPos, Quaternion.identity);
@@ -133,7 +137,7 @@ namespace Shepherd
 
                         // store owner of vertex
                         shepherdLocs.Add(me, m_activeShepherd);
-
+                        m_shepherds.Add(obj);
 
                         //Add vertex to the triangulation and update the voronoi
                         Delaunay.AddVertex(m_delaunay, me);
@@ -143,8 +147,10 @@ namespace Shepherd
                         m_dcel = Voronoi.Create(m_delaunay);
 
                         UpdateMesh();
+                        
                     }
-                }       
+                }
+                text.text = "Shepherds: " + shepherdLocs.Count;
             }
         }
 
@@ -158,6 +164,7 @@ namespace Shepherd
         public void InitLevel()
         {
             foreach (var sheep in m_sheep) Destroy(sheep);
+            foreach (var shepherd in m_shepherds) Destroy(shepherd);
 
             m_sheep.Clear();
 
@@ -166,6 +173,8 @@ namespace Shepherd
             m_activeShepherd = 0;
 
             var level = m_levels[m_levelCounter];
+
+            shepherdLocs = new Dictionary<Vector2, int>();
 
             for (int i = 0; i < level.SheepList.Count; i++)
             {
@@ -178,8 +187,11 @@ namespace Shepherd
                 m_sheep.Add(obj);
             }
             
-
-            m_dcel = new DCEL();
+            m_delaunay = Delaunay.Create();
+            m_dcel = Voronoi.Create(m_delaunay);
+            UpdateMesh();
+            text.text = "Shepherds: " + shepherdLocs.Count;
+            StartVoronoi();
         }
 
         /*
