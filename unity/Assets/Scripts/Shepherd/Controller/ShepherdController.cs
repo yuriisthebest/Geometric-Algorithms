@@ -187,7 +187,9 @@ namespace Shepherd
                 var pos = new Vector3(sheep.x, sheep.y, -1);
                 var obj = Instantiate(m_sheepPrefab, pos, Quaternion.identity) as GameObject;
                 SpriteRenderer sr = obj.GetComponent<SpriteRenderer>();
+                OwnerScript os = obj.GetComponent<OwnerScript>();
                 sr.color = Colors[type];
+                os.SetOwner(type);
                 m_sheep.Add(obj);
             }
             
@@ -211,7 +213,8 @@ namespace Shepherd
                 // TODO, find color / owner of sheep and link it to the owner
                 //sheep.GetComponent<SpriteRenderer>().color;
                 Face area = vd.Search(sheep_pos).bottom.face;
-                if (area.owner != 1)
+                Debug.Log("Face corresponding to the area of the sheep position: " + area + "\nArea owner: " + area.owner);
+                if (area.owner != sheep.GetComponent<OwnerScript>().GetOwner())
                 {
                     return false;
                 }
