@@ -148,7 +148,7 @@ namespace Shepherd
 
                         // Create vertical decomposition and check solution
                         VerticalDecomposition vd = VertDecomp(m_dcel);
-                        print("The current solution is " + (CheckSolution(vd) ? "correct!" : "wrong!"));
+                        Debug.LogAssertion("The current solution is " + (CheckSolution(vd) ? "correct!" : "wrong!"));
 
                         UpdateMesh();
                         
@@ -210,7 +210,8 @@ namespace Shepherd
                 // Check if the owner of the area that the sheep is located in is equal to the sheeps owner
                 // TODO, find color / owner of sheep and link it to the owner
                 //sheep.GetComponent<SpriteRenderer>().color;
-                if (vd.Search(sheep_pos).bottom.face.owner != 1)
+                Face area = vd.Search(sheep_pos).bottom.face;
+                if (area.owner != 1)
                 {
                     return false;
                 }
