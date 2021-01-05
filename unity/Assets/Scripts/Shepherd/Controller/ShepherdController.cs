@@ -46,6 +46,8 @@ namespace Shepherd
 
         [SerializeField]
         private GameObject selection;
+        [SerializeField]
+        private GameObject continueButton;
 
         public Text text;
 
@@ -142,6 +144,12 @@ namespace Shepherd
                             Debug.LogAssertion("The current solution is " + (CheckSolution(vd) ? "correct!" : "wrong!"));
 
                             VoronoiDrawer.SetVD(vd);
+                        } else
+                        {
+                            // Bit janky, assumes no shepherds => always false (so each level must have a sheep)
+                            // But otherwise empty solutions will be seen as correct
+                            Debug.LogAssertion("The current solution is wrong!");
+                            continueButton.SetActive(false);
                         }
 
                         UpdateMesh();
@@ -213,7 +221,7 @@ namespace Shepherd
             m_levelSolved = false;
             m_restartLevel = false;
             m_activeShepherd = 0;
-
+            continueButton.SetActive(false);
             var level = m_levels[m_levelCounter];
             budget = level.ShepherdBudget;
 
@@ -261,7 +269,10 @@ namespace Shepherd
             }
             Debug.LogAssertion("The current solution is " + (wrong == 0 ? "correct!" : "wrong!") + "\n"
                 + (this.m_sheep.Count - wrong) + " out of " + this.m_sheep.Count + " correct");
-            return wrong == 0;
+
+            bool solved = wrong == 0;
+            continueButton.SetActive(solved);
+            return solved;
         }
         // I get errors if I don't implement this function (since I added parameter in function above)
         public void CheckSolution() { }
