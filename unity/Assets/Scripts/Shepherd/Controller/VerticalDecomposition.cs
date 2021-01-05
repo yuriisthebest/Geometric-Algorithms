@@ -4,7 +4,7 @@ using Util.Geometry.DCEL;
 
 public class VerticalDecomposition
 {
-    List<Trapezoid> traps;
+    public List<Trapezoid> traps = new List<Trapezoid>();
     SearchNode TreeRoot;
     
     /*
@@ -31,7 +31,7 @@ public class VerticalDecomposition
         LineSegment top = new LineSegment(new Vector2(-width, height), new Vector2(width, height), null);
         // Create initial trapezoid and root of searchtree
         Trapezoid inital_trapezoid = new Trapezoid(new Vector2(-width, height), new Vector2(width, -height), top, bottom);
-
+        traps.Add(inital_trapezoid);
          this.TreeRoot = new SearchNode(inital_trapezoid);
         inital_trapezoid.SetLeaf(TreeRoot);
 
@@ -70,6 +70,8 @@ public class VerticalDecomposition
 
         // Find all trapezoids intersecting the segment
         List<Trapezoid> Intersecting = this.FindIntersecting(seg);
+        foreach (Trapezoid tr in Intersecting) traps.Remove(tr);
+
         // Find all leafs of intersecting trapezoids
         foreach (Trapezoid trap in Intersecting)
         {
@@ -79,7 +81,8 @@ public class VerticalDecomposition
         }
         // Modify all intersecting trapezoids, by deleting, merging and creating trapezoids
         List<Trapezoid> newTrapezoids = this.CreateTrapezoids(Intersecting, seg);
-        
+        traps.AddRange(newTrapezoids);
+
         // Create new leafs for the new trapezoids
         foreach (Trapezoid trapezoid in newTrapezoids)
         {

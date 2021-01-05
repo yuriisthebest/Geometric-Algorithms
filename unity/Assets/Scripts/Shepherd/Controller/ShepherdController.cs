@@ -167,6 +167,7 @@ namespace Shepherd
                         VerticalDecomposition vd = VertDecomp(m_dcel);
                         Debug.LogAssertion("The current solution is " + (CheckSolution(vd) ? "correct!" : "wrong!"));
 
+                        VoronoiDrawer.SetVD(vd);
                         UpdateMesh();
                         
                     }
