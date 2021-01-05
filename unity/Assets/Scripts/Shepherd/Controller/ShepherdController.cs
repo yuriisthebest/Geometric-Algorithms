@@ -59,6 +59,7 @@ namespace Shepherd
         private static List<Color> Colors = new List<Color>(){Color.red, new Color(0f, 0.6f, 0f), Color.yellow, new Color(0f, 0.4f, 1f)};
 
         private Dictionary<Vector2, int> shepherdLocs = new Dictionary<Vector2, int>();
+        private int budget;
 
         private List<Vector3> buttonLocs;
 
@@ -125,7 +126,7 @@ namespace Shepherd
                 }
                 else {
                     var mousePos = Input.mousePosition;
-                    if (!EventSystem.current.IsPointerOverGameObject()) {
+                    if (!EventSystem.current.IsPointerOverGameObject() && shepherdLocs.Count < budget) {
                         mousePos.z = 2.0f;
                         var objectPos = Camera.main.ScreenToWorldPoint(mousePos);
                         var obj = Instantiate(shepherd, objectPos, Quaternion.identity);
@@ -154,7 +155,7 @@ namespace Shepherd
                         
                     }
                 }
-                text.text = "Shepherds: " + shepherdLocs.Count;
+                text.text = "Shepherds: " + shepherdLocs.Count + "/" + budget;
             }
         }
 
@@ -177,6 +178,7 @@ namespace Shepherd
             m_activeShepherd = 0;
 
             var level = m_levels[m_levelCounter];
+            budget = level.ShepherdBudget;
 
             shepherdLocs = new Dictionary<Vector2, int>();
 
@@ -196,7 +198,7 @@ namespace Shepherd
             m_delaunay = Delaunay.Create();
             m_dcel = Voronoi.Create(m_delaunay);
             UpdateMesh();
-            text.text = "Shepherds: " + shepherdLocs.Count;
+            text.text = "Shepherds: " + shepherdLocs.Count + "/" + budget;
             StartVoronoi();
         }
 
