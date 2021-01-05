@@ -134,7 +134,7 @@ namespace Shepherd
                             m_delaunay.SetOwner(o.Key, o.Value);
                         }
                         m_dcel = Voronoi.Create(m_delaunay);
-
+                        VoronoiDrawer.setDCEL(m_dcel);
                         // Create vertical decomposition and check solution
                         if (shepherdLocs.Count > 0)
                         {
@@ -170,7 +170,7 @@ namespace Shepherd
                         m_delaunay.SetOwner(me, m_activeShepherd);//shepherdColour1 ? EOwnership.PLAYER1 :
                                                                   //shepherdColour2 ? EOwnership.PLAYER2 :  shepherdColour3 ? EOwnership.PLAYER3 : EOwnership.PLAYER4)
                         m_dcel = Voronoi.Create(m_delaunay);
-
+                        VoronoiDrawer.setDCEL(m_dcel);
                         // Create vertical decomposition and check solution
                         VerticalDecomposition vd = VertDecomp(m_dcel);
                         CheckSolution(vd);
@@ -234,6 +234,7 @@ namespace Shepherd
             
             m_delaunay = Delaunay.Create();
             m_dcel = Voronoi.Create(m_delaunay);
+            VoronoiDrawer.setDCEL(m_dcel);
             UpdateMesh();
             text.text = "Shepherds: " + shepherdLocs.Count + "/" + budget;
             StartVoronoi();
@@ -360,16 +361,11 @@ namespace Shepherd
                     edgesVisited.Add(edge.Twin);
                 }
             }
-
+            VoronoiDrawer.setDCEL(dcel);
             return dcel;
         }
 
-        // Anne
-        public void DrawVoronoi(DCEL VoronoiGraph)
-        {
-            
-        }
-
+    
         /// <summary>
         /// Updates the mesh according to the Voronoi DCEL.
         /// (Edited from Voronoi game)

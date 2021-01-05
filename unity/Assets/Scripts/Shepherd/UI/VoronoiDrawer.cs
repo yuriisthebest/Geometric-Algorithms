@@ -2,6 +2,7 @@
 {
     using UnityEngine;
     using Util.Geometry.Triangulation;
+    using Util.Geometry.DCEL;
 
     /// <summary>
     /// Static class responsible for displaying voronoi graph and concepts.
@@ -17,7 +18,9 @@
         // line material for Unity shader
         private static Material m_lineMaterial;
 
-        static VerticalDecomposition verticalDecomposition;
+        private static VerticalDecomposition verticalDecomposition;
+        private static DCEL voronoi_dcel;
+
 
         public static void CreateLineMaterial()
         {
@@ -108,14 +111,35 @@
             GL.End();
         }
 
+        private static void drawDCEL(DCEL dcel)
+        {
+            GL.Begin(GL.LINES);
+            GL.Color(Color.black);
+
+            foreach (HalfEdge halfEdge in dcel.Edges)
+            {
+                GL.Vertex3(halfEdge.From.Pos.x, halfEdge.From.Pos.y, 0);
+                GL.Vertex3(halfEdge.To.Pos.x, halfEdge.To.Pos.y, 0);
+            }
+            GL.End();
+        }
+
+        public static void setDCEL(DCEL dcel)
+        {
+            voronoi_dcel = dcel;
+        }
+
         /// <summary>
         /// Draws the voronoi diagram related to delaunay triangulation
         /// </summary>
         /// <param name="m_Delaunay"></param>
+        /// 
         private static void DrawVoronoi(Triangulation m_Delaunay)
         {
             GL.Begin(GL.LINES);
             GL.Color(Color.black);
+
+
 
             foreach (var halfEdge in m_Delaunay.Edges)
             {
@@ -155,7 +179,7 @@
             if (CircleOn) DrawCircles(m_Delaunay);
             if (VoronoiOn)
             {
-                DrawVoronoi(m_Delaunay);
+                drawDCEL(voronoi_dcel);
                 if (verticalDecomposition != null)
                 {
                     DrawVD(verticalDecomposition);
