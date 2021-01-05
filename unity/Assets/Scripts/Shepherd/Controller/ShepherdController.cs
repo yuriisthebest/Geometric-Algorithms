@@ -166,6 +166,7 @@ namespace Shepherd
                         VerticalDecomposition vd = VertDecomp(m_dcel);
                         CheckSolution(vd);
 
+                        VoronoiDrawer.SetVD(vd);
                         UpdateMesh();
                         
                     }

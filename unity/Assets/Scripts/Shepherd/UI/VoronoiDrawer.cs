@@ -17,6 +17,8 @@
         // line material for Unity shader
         private static Material m_lineMaterial;
 
+        static VerticalDecomposition verticalDecomposition;
+
         public static void CreateLineMaterial()
         {
             // Unity has a built-in shader that is useful for drawing
@@ -151,7 +153,48 @@
             // call functions that are set to true
             if (EdgesOn) DrawEdges(m_Delaunay);
             if (CircleOn) DrawCircles(m_Delaunay);
-            if (VoronoiOn) DrawVoronoi(m_Delaunay);
+            if (VoronoiOn)
+            {
+                DrawVoronoi(m_Delaunay);
+                if (verticalDecomposition != null)
+                {
+                    DrawVD(verticalDecomposition);
+                }
+            }
+        }
+
+        public static void DrawVD(VerticalDecomposition vd)
+        {
+            GL.Begin(GL.LINES);
+            GL.Color(Color.cyan);
+
+            foreach (Trapezoid t in vd.traps)
+            {
+                var l1 = intersect(t.top, t.left);
+                var l2 = intersect(t.bottom, t.left);
+                GL.Vertex3(l1.x, l1.y, 0);
+                GL.Vertex3(l2.x, l2.y, 0);
+            }
+            GL.End();
+        }
+
+        public static void SetVD(VerticalDecomposition vd)
+        {
+            verticalDecomposition = vd;
+        }
+
+        private static Vector2 intersect(LineSegment ls, Vector2 p)
+        {
+            var x1 = ls.point1.x;
+            var x2 = ls.point2.x;
+            var y1 = ls.point1.y;
+            var y2 = ls.point2.y;
+
+            var xf = p.x;
+
+            var yf = y1 + ((xf - x1) * (y2 - y1)) / (x2 - x1);
+
+            return new Vector2(xf, yf);
         }
     }
 }
