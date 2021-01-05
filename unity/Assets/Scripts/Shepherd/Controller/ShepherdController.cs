@@ -15,7 +15,6 @@ namespace Shepherd
     using Util.Geometry.Polygon;
     using Util.Geometry.Triangulation;
     using Util.Algorithms.Triangulation;
-    using Voronoi;
 
     // Shepherd ownership
     public enum EOwnership
@@ -93,10 +92,27 @@ namespace Shepherd
                 GameObject.Find("YelShep").transform.position,
                 GameObject.Find("BluShep").transform.position
             };
+
+            VoronoiDrawer.CreateLineMaterial();
         }
 
         void Update()
         {
+            if (Input.GetKeyDown("c"))
+            {
+                VoronoiDrawer.CircleOn = !VoronoiDrawer.CircleOn;
+            }
+
+            if (Input.GetKeyDown("e"))
+            {
+                VoronoiDrawer.EdgesOn = !VoronoiDrawer.EdgesOn;
+            }
+
+            if (Input.GetKeyDown("v"))
+            {
+                VoronoiDrawer.VoronoiOn = !VoronoiDrawer.VoronoiOn;
+            }
+
             // Handle mouse clicks
             if (Input.GetMouseButtonDown(0)) {
                 // Cast a ray, get everything it hits
@@ -159,6 +175,18 @@ namespace Shepherd
             }
         }
 
+        private void OnRenderObject()
+        {
+            GL.PushMatrix();
+
+            // Set transformation matrix for drawing to
+            // match our transform
+            GL.MultMatrix(transform.localToWorldMatrix);
+
+            VoronoiDrawer.Draw(m_delaunay);
+
+            GL.PopMatrix();
+        }
 
         public void SetActiveShepherd(int owner) {
             m_activeShepherd = owner;

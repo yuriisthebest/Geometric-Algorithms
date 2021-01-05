@@ -1,4 +1,4 @@
-﻿namespace Voronoi
+﻿namespace Shepherd
 {
     using UnityEngine;
     using Util.Geometry.Triangulation;
