@@ -159,13 +159,12 @@ namespace Shepherd
                         //Add vertex to the triangulation and update the voronoi
                         Delaunay.AddVertex(m_delaunay, me);
                         m_delaunay.SetOwner(me, m_activeShepherd);//shepherdColour1 ? EOwnership.PLAYER1 :
-                            //shepherdColour2 ? EOwnership.PLAYER2 :  shepherdColour3 ? EOwnership.PLAYER3 : EOwnership.PLAYER4)
-                
+                                                                  //shepherdColour2 ? EOwnership.PLAYER2 :  shepherdColour3 ? EOwnership.PLAYER3 : EOwnership.PLAYER4)
                         m_dcel = Voronoi.Create(m_delaunay);
 
                         // Create vertical decomposition and check solution
                         VerticalDecomposition vd = VertDecomp(m_dcel);
-                        Debug.LogAssertion("The current solution is " + (CheckSolution(vd) ? "correct!" : "wrong!"));
+                        CheckSolution(vd);
 
                         UpdateMesh();
                         
@@ -236,20 +235,22 @@ namespace Shepherd
          // Yuri
         public bool CheckSolution(VerticalDecomposition vd)
         {
+            int wrong = 0;
             foreach (GameObject sheep in this.m_sheep)
             {
                 Vector2 sheep_pos = new Vector2(sheep.transform.position.x, sheep.transform.position.y);
                 // Check if the owner of the area that the sheep is located in is equal to the sheeps owner
-                // TODO, find color / owner of sheep and link it to the owner
-                //sheep.GetComponent<SpriteRenderer>().color;
-                Face area = vd.Search(sheep_pos).bottom.face;
-                Debug.Log("Face corresponding to the area of the sheep position: " + area + "\nArea owner: " + area.owner);
+                Trapezoid trap = vd.Search(sheep_pos);
+                Face area = trap.bottom.face;
+                Debug.Log("Face corresponding to the area of the sheep position: " + area + "\nArea owner: " + area.owner + "\n" + trap.show());
                 if (area.owner != sheep.GetComponent<OwnerScript>().GetOwner())
                 {
-                    return false;
+                    wrong += 1;
                 }
             }
-            return true;
+            Debug.LogAssertion("The current solution is " + (wrong == 0 ? "correct!" : "wrong!") + "\n"
+                + (this.m_sheep.Count - wrong) + " out of " + this.m_sheep.Count + " correct");
+            return wrong == 0;
         }
         // I get errors if I don't implement this function (since I added parameter in function above)
         public void CheckSolution() { }
