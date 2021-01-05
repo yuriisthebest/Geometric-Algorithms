@@ -46,7 +46,7 @@ public class VerticalDecomposition
             //  So only add half-edges whose to-vertex is to the right of the from-vertex
             //  So skip half-edges where 'to' has smaller x value than 'from'
             // Also skip edges going to and from the bounding box???
-            if (edge.To.Pos.x < edge.From.Pos.x) { continue; }
+            if (edge.To.Pos.x > edge.From.Pos.x) { continue; }
             if (edge.To.Pos.x == edge.From.Pos.x && edge.To.Pos.y <= edge.From.Pos.y) { continue; }
             LineSegment segment = new LineSegment(edge.From.Pos, edge.To.Pos, edge.Face);
             Debug.Log("Inserting segment: " + segment.show());
