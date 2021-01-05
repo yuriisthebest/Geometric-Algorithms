@@ -329,7 +329,7 @@ public class LoadLevelEditor : ScriptedImporter
     }
 
      private UnityEngine.Object LoadShepherdLevel(XElement fileSelected, string name)
-    {
+     {
         // create the output scriptable object
         var asset = ScriptableObject.CreateInstance<ShepherdLevel>();
 
@@ -361,8 +361,10 @@ public class LoadLevelEditor : ScriptedImporter
             EditorUtility.DisplayDialog("Warning", "File does not contain any valid markers.", "OK");
         }
 
+        asset.setBudget(int.Parse( name.Split('_').Last()));
+
         return asset;
-    }
+     }
 
     /// <summary>
     /// Retrieve a vector list for all markers elements with given name

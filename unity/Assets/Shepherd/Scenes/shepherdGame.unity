@@ -470,7 +470,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_levels:
-  - {fileID: 11400000, guid: 626de1a80965ac24296650f4ad162dc7, type: 3}
+  - {fileID: 11400002, guid: a6572fd5e0f90a243ac90ffb25e82691, type: 3}
+  - {fileID: 11400002, guid: 626de1a80965ac24296650f4ad162dc7, type: 3}
   m_sheepPrefab: {fileID: 1181164488822959972, guid: 04905fd920e01f445b0d7be944208980,
     type: 3}
   m_meshFilter: {fileID: 233100918}
