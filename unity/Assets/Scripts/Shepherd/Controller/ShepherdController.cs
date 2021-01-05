@@ -280,7 +280,13 @@ namespace Shepherd
         public void AdvanceLevel()
         {
             m_levelCounter++;
-            InitLevel();
+            if (m_levelCounter == m_levels.Count)
+            {
+                SceneManager.LoadScene("shepherdVictory");
+            } else {
+                InitLevel();
+            }
+           
         }
 
         // Anne
