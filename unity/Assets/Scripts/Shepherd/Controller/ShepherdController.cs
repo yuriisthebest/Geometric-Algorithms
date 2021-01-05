@@ -135,6 +135,15 @@ namespace Shepherd
                         }
                         m_dcel = Voronoi.Create(m_delaunay);
 
+                        // Create vertical decomposition and check solution
+                        if (shepherdLocs.Count > 0)
+                        {
+                            VerticalDecomposition vd = VertDecomp(m_dcel);
+                            Debug.LogAssertion("The current solution is " + (CheckSolution(vd) ? "correct!" : "wrong!"));
+
+                            VoronoiDrawer.SetVD(vd);
+                        }
+
                         UpdateMesh();
 
                         Destroy(lastHitObject);

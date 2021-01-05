@@ -170,6 +170,7 @@
 
             foreach (Trapezoid t in vd.traps)
             {
+                // only need to draw left bounds since very rightmost is always out of frame
                 var l1 = intersect(t.top, t.left);
                 var l2 = intersect(t.bottom, t.left);
                 GL.Vertex3(l1.x, l1.y, 0);
