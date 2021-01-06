@@ -141,7 +141,7 @@ namespace Shepherd
                         if (shepherdLocs.Count > 0)
                         {
                             VerticalDecomposition vd = VertDecomp(m_dcel);
-                            Debug.LogAssertion("The current solution is " + (CheckSolution(vd) ? "correct!" : "wrong!"));
+                            Debug.LogAssertion("The current solution is " + (CheckSolution(vd) == 0 ? "correct!" : "wrong!"));
 
                             VoronoiDrawer.SetVD(vd);
                         } else
@@ -188,7 +188,6 @@ namespace Shepherd
                         
                     }
                 }
-                text.text = "Shepherds: " + shepherdLocs.Count + "/" + budget;
             }
         }
 
@@ -244,7 +243,7 @@ namespace Shepherd
             m_dcel = Voronoi.Create(m_delaunay);
             VoronoiDrawer.setDCEL(m_dcel);
             UpdateMesh();
-            text.text = "Shepherds: " + shepherdLocs.Count + "/" + budget;
+            text.text = "Shepherds: " + shepherdLocs.Count + "/" + budget + "\nIncorrect sheep: " + m_sheep.Count;
             StartVoronoi();
         }
 
@@ -252,7 +251,7 @@ namespace Shepherd
          * Check if a solution is correct by checking if every sheep is within the correct area
          */
          // Yuri
-        public bool CheckSolution(VerticalDecomposition vd)
+        public int CheckSolution(VerticalDecomposition vd)
         {
             int wrong = 0;
             foreach (GameObject sheep in this.m_sheep)
@@ -270,9 +269,10 @@ namespace Shepherd
             Debug.LogAssertion("The current solution is " + (wrong == 0 ? "correct!" : "wrong!") + "\n"
                 + (this.m_sheep.Count - wrong) + " out of " + this.m_sheep.Count + " correct");
 
+            text.text = "Shepherds: " + shepherdLocs.Count + "/" + budget + "\nIncorrect sheep: " + wrong;
             bool solved = wrong == 0;
             continueButton.SetActive(solved);
-            return solved;
+            return wrong;
         }
         // I get errors if I don't implement this function (since I added parameter in function above)
         public void CheckSolution() { }
