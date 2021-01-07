@@ -49,13 +49,14 @@ namespace Shepherd
         [SerializeField]
         private GameObject continueButton;
 
+        // parameter to see if we are in the endless random level mode
+        [SerializeField]
+        protected bool m_endlessMode = false;
+
         public Text text;
 
         private List<GameObject> m_sheep = new List<GameObject>();
         private List<GameObject> m_shepherds = new List<GameObject>();
-
-        private bool m_levelSolved;
-        private bool m_restartLevel;
 
         private static List<Color> Colors = new List<Color>(){Color.red, new Color(0f, 0.6f, 0f), Color.yellow, new Color(0f, 0.4f, 1f)};
 
@@ -65,14 +66,6 @@ namespace Shepherd
         private List<Vector3> buttonLocs;
 
         public GameObject shepherd;
-        
-        private bool shepherdColour1 = true;
-        private bool shepherdColour2;
-        private bool shepherdColour3;
-        private bool shepherdColour4;
-
-        // mapping of vertices to ownership enum
-        private readonly Dictionary<Vector2, int> m_ownership = new Dictionary<Vector2, int>();
 
         // Voronoi objects
         private Triangulation m_delaunay;
@@ -83,8 +76,7 @@ namespace Shepherd
         
         private DCEL m_dcel;
 
-        private System.Random rd = new System.Random();
-
+        // start of a level
         void Start()
         {
             InitLevel();
@@ -98,6 +90,7 @@ namespace Shepherd
             VoronoiDrawer.CreateLineMaterial();
         }
 
+        // update the level given an input
         void Update()
         {
             if (Input.GetKeyDown("c"))
@@ -175,8 +168,7 @@ namespace Shepherd
 
                         //Add vertex to the triangulation and update the voronoi
                         Delaunay.AddVertex(m_delaunay, me);
-                        m_delaunay.SetOwner(me, m_activeShepherd);//shepherdColour1 ? EOwnership.PLAYER1 :
-                                                                  //shepherdColour2 ? EOwnership.PLAYER2 :  shepherdColour3 ? EOwnership.PLAYER3 : EOwnership.PLAYER4)
+                        m_delaunay.SetOwner(me, m_activeShepherd);
                         m_dcel = Voronoi.Create(m_delaunay);
                         VoronoiDrawer.setDCEL(m_dcel);
                         // Create vertical decomposition and check solution
@@ -209,19 +201,32 @@ namespace Shepherd
             selection.transform.position = buttonLocs[owner];
         }
 
-        // Anne
+        // Anne & Christine 
+        // initialize level
         public void InitLevel()
         {
+            // clear the previous level and set all variables to their
+            // original value
             foreach (var sheep in m_sheep) Destroy(sheep);
             foreach (var shepherd in m_shepherds) Destroy(shepherd);
 
             m_sheep.Clear();
 
-            m_levelSolved = false;
-            m_restartLevel = false;
             m_activeShepherd = 0;
             continueButton.SetActive(false);
-            var level = m_levels[m_levelCounter];
+            ShepherdLevel level;
+
+            Debug.Log("test");
+
+            if (m_endlessMode)
+            {
+                level = InitEndlessLevel(m_levelCounter);
+            }
+            else
+            {
+                level = m_levels[m_levelCounter];
+            }
+
             budget = level.ShepherdBudget;
 
             shepherdLocs = new Dictionary<Vector2, int>();
@@ -238,19 +243,141 @@ namespace Shepherd
                 os.SetOwner(type);
                 m_sheep.Add(obj);
             }
-            
-            m_delaunay = Delaunay.Create();
-            m_dcel = Voronoi.Create(m_delaunay);
-            VoronoiDrawer.setDCEL(m_dcel);
+
+            StartVoronoi();
             UpdateMesh();
             text.text = "Shepherds: " + shepherdLocs.Count + "/" + budget + "\nIncorrect sheep: " + m_sheep.Count;
-            StartVoronoi();
+
         }
+
+        // advance the level or give the victory screen
+        public void AdvanceLevel()
+        {
+            m_levelCounter++;
+            if (m_levelCounter == m_levels.Count & !m_endlessMode)
+            {
+                SceneManager.LoadScene("shepherdVictory");
+            }
+            else
+            {
+                InitLevel();
+            }
+
+        }
+
+
+        // Random endless level generation
+        // Determines the amount of shepherds placed based on the current level
+        private ShepherdLevel InitEndlessLevel(int level)
+        {
+           // create the output scriptable object
+            var asset = ScriptableObject.CreateInstance<ShepherdLevel>();
+
+            // place the shepherds and sheep randomly
+            List<Vector2> shepherds = RandomPos(level + 4);
+            List<Vector2> sheep = RandomPos(2*(level + 4));
+
+            // construct the voronoi diagram corresponding to the shepherds
+            // locations
+            StartVoronoi();
+            foreach (Vector2 me in shepherds)
+            {
+                m_activeShepherd = Random.Range(0, 4);
+                //Add vertex to the triangulation and update the voronoi
+                Delaunay.AddVertex(m_delaunay, me);
+                m_delaunay.SetOwner(me, m_activeShepherd);
+                m_dcel = Voronoi.Create(m_delaunay);
+            }
+
+            // create vertical decomposition
+            VerticalDecomposition vd = VertDecomp(m_dcel);
+
+            // use the vertical decomposition to determine the ownership of each sheep
+            // and add the sheep to the level
+
+            foreach(Vector2 s in sheep)
+            {
+                Trapezoid trap = vd.Search(s);
+                Face area = trap.bottom.face;
+                int i = area.owner;
+                asset.addSheep(s, i);
+            }
+
+            // normalize coordinates
+
+            var rect = BoundingBoxComputer.FromPoints(asset.SheepList);
+            asset.SheepList = Normalize(rect, 6f, asset.SheepList);
+
+            asset.setBudget(shepherds.Count);
+            return asset;
+        }
+
+
+        /// <summary>
+        /// Normalizes the coordinate vector to fall within bounds specified by rect.
+        /// Also adds random perturbations to create general positions.
+        /// </summary>
+        /// <param name="rect">Bounding box</param>
+        /// <param name="coords"></param>
+        private List<Vector2> Normalize(Rect rect, float SIZE, List<Vector2> coords)
+        {
+            var scale = SIZE / Mathf.Max(rect.width, rect.height);
+
+            return coords
+                .Select(p => new Vector2(
+                    (p[0] - (rect.xMin + rect.width / 2f)) * scale,
+                    (p[1] - (rect.yMin + rect.height / 2f)) * scale))
+                .ToList();
+        }
+
+
+        /// <summary>
+        /// Returns count non-overlaping random positions not on the boundary
+        /// </summary>
+        /// <param name="count"> The number of positions returned</param>
+        /// <returns></returns>
+        protected List<Vector2> RandomPos(int count)
+        {
+            var result = new List<Vector2>();
+
+            while (result.Count < count)
+            {
+                // find uniform random positions in the rectangle (0,0) (1,1)
+                var xpos = Random.Range(0.0f, 1.0f);
+                var ypos = Random.Range(0.0f, 1.0f);
+                var pos = new Vector2(xpos, ypos);
+                result.Add(pos);
+
+            }
+
+            return result;
+        }
+
+
+        /* Create a vertical decomposition of the Voronoi diagram of the shepherds
+        *  will be used to determine the nearest shepherd for each sheep
+        * 
+        * Responsible: Yuri
+        */
+        public VerticalDecomposition VertDecomp(DCEL InGraph)
+        {
+            return new VerticalDecomposition(InGraph, m_meshFilter);
+        }
+
+
+        // Anne
+        // KAN DIT WEG? - Christine
+        public Polygon2D LocatePoint(Vector2D p, DCEL InGraph)
+        {
+            var vc = VertDecomp(InGraph);
+            return null;
+        }
+
 
         /*
          * Check if a solution is correct by checking if every sheep is within the correct area
          */
-         // Yuri
+        // Yuri
         public int CheckSolution(VerticalDecomposition vd)
         {
             int wrong = 0;
@@ -277,109 +404,15 @@ namespace Shepherd
         // I get errors if I don't implement this function (since I added parameter in function above)
         public void CheckSolution() { }
 
-        public void AdvanceLevel()
-        {
-            m_levelCounter++;
-            if (m_levelCounter == m_levels.Count)
-            {
-                SceneManager.LoadScene("shepherdVictory");
-            } else {
-                InitLevel();
-            }
-           
-        }
-
-        // Anne
-        public Polygon2D LocatePoint(Vector2D p, DCEL InGraph) 
-        {
-            var vc = VertDecomp(InGraph);
-            return null;
-        }
-
-        /* Create a vertical decomposition of the Voronoi diagram of the shepherds
-         *  will be used to determine the nearest shepherd for each sheep
-         * 
-         * Responsible: Yuri
-         */
-        public VerticalDecomposition VertDecomp(DCEL InGraph) 
-        {
-            return new VerticalDecomposition(InGraph, m_meshFilter);
-        }
 
         // Christine
+        // Initial call for the construction of the Voronoi diagram
         public void StartVoronoi()
-        { 
-            // create initial delaunay triangulation (three far-away points)
-            // TODO: make sure that the sheep are not taken into account!!
-            m_delaunay = Delaunay.Create();
-
-            // add auxiliary vertices as unowned
-            foreach (var vertex in m_delaunay.Vertices)
-            {
-                m_ownership.Add(vertex, 0);
-            }
-
-            // create polygon of rectangle window for intersection with voronoi
-            float z = Vector2.Distance(m_meshFilter.transform.position, Camera.main.transform.position);
-            var bottomLeft = Camera.main.ViewportToWorldPoint(new Vector3(0, 0, z));
-            var topRight = Camera.main.ViewportToWorldPoint(new Vector3(1, 1, z));
-            m_meshRect = new Polygon2D(
-                new List<Vector2>() {
-                    new Vector2(bottomLeft.x, bottomLeft.z),
-                    new Vector2(bottomLeft.x, topRight.z),
-                    new Vector2(topRight.x, topRight.z),
-                    new Vector2(topRight.x, bottomLeft.z)
-                });
-
-            VoronoiDrawer.CreateLineMaterial();
-        }
-
-        // Christine
-        public static DCEL CreateVoronoi(Triangulation m_delaunay)
         {
-            if (!Delaunay.IsValid(m_delaunay))
-            {
-                throw new GeomException("Triangulation should be delaunay for the Voronoi diagram.");
-            }
+            m_delaunay = Delaunay.Create();
+            m_dcel = Voronoi.Create(m_delaunay);
+            VoronoiDrawer.setDCEL(m_dcel);
 
-            var dcel = new DCEL();
-
-            // create vertices for each triangles circumcenter and store them in a dictionary
-            Dictionary<Triangle, DCELVertex> vertexMap = new Dictionary<Triangle, DCELVertex>();
-            foreach (var triangle in m_delaunay.Triangles)
-            {
-                // degenerate triangle, just ignore
-                if (!triangle.Circumcenter.HasValue) continue;
-
-                var vertex = new DCELVertex(triangle.Circumcenter.Value);
-                dcel.AddVertex(vertex);
-                vertexMap.Add(triangle, vertex);
-            }
-
-            // remember which edges where visited
-            // since each edge has a twin
-            var edgesVisited = new HashSet<TriangleEdge>();
-
-            foreach (var edge in m_delaunay.Edges)
-            {
-                // either already visited twin edge or edge is outer triangle
-                if (edgesVisited.Contains(edge) || edge.IsOuter) continue;
-
-                // add edge between the two adjacent triangles vertices
-                // vertices at circumcenter of triangle
-                if (edge.T != null && edge.Twin.T != null)
-                {
-                    var v1 = vertexMap[edge.T];
-                    var v2 = vertexMap[edge.Twin.T];
-
-                    dcel.AddEdge(v1, v2);
-
-                    edgesVisited.Add(edge);
-                    edgesVisited.Add(edge.Twin);
-                }
-            }
-            VoronoiDrawer.setDCEL(dcel);
-            return dcel;
         }
 
     
