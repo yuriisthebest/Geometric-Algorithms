@@ -326,7 +326,7 @@ namespace Shepherd
             return coords
                 .Select(p => new Vector2(
                     (p[0] - (rect.xMin + rect.width / 2f)) * scale,
-                    (p[1] - (rect.yMin + rect.height / 2f)) * scale))
+                    (p[1] - (rect.yMin + rect.height / 2f)) * scale * 0.6f))
                 .ToList();
         }
 
