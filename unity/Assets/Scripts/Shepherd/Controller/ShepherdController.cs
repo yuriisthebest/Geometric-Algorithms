@@ -216,8 +216,6 @@ namespace Shepherd
             continueButton.SetActive(false);
             ShepherdLevel level;
 
-            Debug.Log("test");
-
             if (m_endlessMode)
             {
                 level = InitEndlessLevel(m_levelCounter);
@@ -248,6 +246,18 @@ namespace Shepherd
             UpdateMesh();
             text.text = "Shepherds: " + shepherdLocs.Count + "/" + budget + "\nIncorrect sheep: " + m_sheep.Count;
 
+        }
+
+        // reset random level
+        public void ResetRandomLevel()
+        {
+            foreach (var shepherd in m_shepherds) Destroy(shepherd);
+            m_activeShepherd = 0;
+            continueButton.SetActive(false);
+            shepherdLocs = new Dictionary<Vector2, int>();
+            StartVoronoi();
+            UpdateMesh();
+            text.text = "Shepherds: " + shepherdLocs.Count + "/" + budget + "\nIncorrect sheep: " + m_sheep.Count;
         }
 
         // advance the level or give the victory screen
