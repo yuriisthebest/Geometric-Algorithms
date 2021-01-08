@@ -54,11 +54,12 @@ namespace Shepherd
         protected bool m_endlessMode = false;
 
         public Text text;
+        public Text levelCount_text;
 
         private List<GameObject> m_sheep = new List<GameObject>();
         private List<GameObject> m_shepherds = new List<GameObject>();
 
-        private static List<Color> Colors = new List<Color>(){Color.red, new Color(0f, 0.6f, 0f), Color.yellow, new Color(0f, 0.4f, 1f)};
+        private static List<Color> Colors = new List<Color>(){Color.red, new Color(0f, 0.85f, 0f), Color.yellow, new Color(0f, 0.4f, 1f)};
 
         private Dictionary<Vector2, int> shepherdLocs = new Dictionary<Vector2, int>();
         private int budget;
@@ -79,14 +80,15 @@ namespace Shepherd
         // start of a level
         void Start()
         {
-            InitLevel();
+            m_levelCounter = 0;
+            levelCount_text.text = (m_levelCounter + 1).ToString();
             buttonLocs = new List<Vector3>() {
                 GameObject.Find("RedShep").transform.position,
                 GameObject.Find("GrnShep").transform.position,
                 GameObject.Find("YelShep").transform.position,
                 GameObject.Find("BluShep").transform.position
             };
-
+            InitLevel();
             VoronoiDrawer.CreateLineMaterial();
         }
 
@@ -212,7 +214,7 @@ namespace Shepherd
 
             m_sheep.Clear();
 
-            m_activeShepherd = 0;
+            SetActiveShepherd(0);
             continueButton.SetActive(false);
             ShepherdLevel level;
 
@@ -264,6 +266,7 @@ namespace Shepherd
         public void AdvanceLevel()
         {
             m_levelCounter++;
+            levelCount_text.text = (m_levelCounter + 1).ToString();
             if (m_levelCounter == m_levels.Count & !m_endlessMode)
             {
                 SceneManager.LoadScene("shepherdVictory");
