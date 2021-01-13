@@ -253,7 +253,14 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: yo yo text and explanations
+  m_Text: 'All sheep have escaped! Help the different coloured shepherds to get their
+    sheep back by placing the shepherds in the field. The area a shepherd covers is
+    shown by its colour. The area is determined by a Voronoi diagram, which shows
+    what part of the field lies closest to which shepherd. This is called the nearest
+    neighbour principle.
+
+
+    Good luck with herding!'
 --- !u!222 &867405668
 CanvasRenderer:
   m_ObjectHideFlags: 0
