@@ -283,13 +283,25 @@ namespace Shepherd
         // Determines the amount of shepherds placed based on the current level
         private ShepherdLevel InitEndlessLevel(int level)
         {
-           // create the output scriptable object
+            // create the output scriptable object
             var asset = ScriptableObject.CreateInstance<ShepherdLevel>();
 
             // place the shepherds and sheep randomly
             List<Vector2> shepherds = RandomPos(level + 4);
-            List<Vector2> sheep = RandomPos(2*(level + 4));
-
+            List<Vector2> sheep = RandomPos(2 * (level + 4));
+            string sls = "Shepherd locations: \n";
+            foreach (Vector2 v in shepherds)
+            {
+                sls += "(" + v.x + ", " + v.y + "), ";
+            }
+            Debug.Log(sls);
+            string shls = "Sheep locations: \n";
+            foreach (Vector2 v in sheep)
+            {
+                shls += "(" + v.x + ", " + v.y + "), ";
+            }
+            Debug.Log(shls);
+            //Debug.Log("Sheep locations:" + shepherds.ToString());
             // construct the voronoi diagram corresponding to the shepherds
             // locations
             StartVoronoi();
