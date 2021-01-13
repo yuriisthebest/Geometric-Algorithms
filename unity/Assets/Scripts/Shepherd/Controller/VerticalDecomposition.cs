@@ -16,15 +16,7 @@ public class VerticalDecomposition
     public VerticalDecomposition(DCEL InGraph, MeshFilter m_meshFilter)
     {
         // *** Initialize vertical decomposition with one trapezoid containing the entire canvas ***
-        // Find bounding box corners
-        /* PREVIOUS
-        float z = Vector2.Distance(m_meshFilter.transform.position, Camera.main.transform.position);
-        var bottomLeft = Camera.main.ViewportToWorldPoint(new Vector3(0, 0, z));
-        var topRight = Camera.main.ViewportToWorldPoint(new Vector3(1, 1, z));
-        LineSegment bottom = new LineSegment(new Vector2(bottomLeft.x, bottomLeft.z), new Vector2(topRight.x, bottomLeft.z), null);
-        LineSegment top = new LineSegment(new Vector2(bottomLeft.x, topRight.z), new Vector2(topRight.x, topRight.z), null);
-        // Create initial trapezoid and root of searchtree
-        Trapezoid inital_trapezoid = new Trapezoid(new Vector2(bottomLeft.x, topRight.z), new Vector2(topRight.x, bottomLeft.z), top, bottom);*/
+        // Determine bounding box corners
         float width = 10000;
         float height = 10000;
         LineSegment bottom = new LineSegment(new Vector2(-width, -height), new Vector2(width, -height), null);
@@ -36,8 +28,17 @@ public class VerticalDecomposition
         inital_trapezoid.SetLeaf(TreeRoot);
 
         // *** Add all edges to the vertical decomposition ***
-        // TODO Randomize the collection of half-edges
-        ICollection<HalfEdge> edges = InGraph.Edges;
+        // Randomize the collection of half-edges
+        ICollection<HalfEdge> c_edges = InGraph.Edges;
+        List<HalfEdge> temp_edges = new List<HalfEdge>();
+        List<HalfEdge> edges = new List<HalfEdge>();
+        foreach (HalfEdge edge in c_edges) { temp_edges.Add(edge); }
+        for (int i = 0; i < c_edges.Count; i++) {
+            int randomIndex = Random.Range(0, temp_edges.Count); //Choose a random object in the list
+            edges.Add(temp_edges[randomIndex]); //add it to the new, random list
+            temp_edges.RemoveAt(randomIndex); //remove to avoid duplicates
+        }
+
         Debug.Log("Adding voronoi with " + edges.Count + " halfedges");
         // Transform all DCEL edges into Linesegments
         foreach (HalfEdge edge in edges)
@@ -45,7 +46,6 @@ public class VerticalDecomposition
             // Only add half-edges whose face is above it
             //  So only add half-edges whose to-vertex is to the right of the from-vertex
             //  So skip half-edges where 'to' has smaller x value than 'from'
-            // Also skip edges going to and from the bounding box???
             if (edge.To.Pos.x > edge.From.Pos.x) { continue; }
             if (edge.To.Pos.x == edge.From.Pos.x && edge.To.Pos.y <= edge.From.Pos.y) { continue; }
             LineSegment segment = new LineSegment(edge.From.Pos, edge.To.Pos, edge.Face);
@@ -135,8 +135,6 @@ public class VerticalDecomposition
     /*
      * Return all trapezoids that are intersecting a given segment
      *  Assumes that the segment does not cross any segments (VD assumption)
-     *  
-     * DEGENERATE CASE WARNING
      */
     private List<Trapezoid> FindIntersecting(LineSegment seg)
     {
@@ -304,26 +302,15 @@ public class VerticalDecomposition
                 neighbor.AddNeighbor(begin);
                 begin.AddNeighbor(neighbor);
             }
-            //oldLower = oldUpper; TODO Cleanup, this was most certainly a bug
             newTrapezoids.Add(begin);
             StartDegenerate = true;
         }
         // Split each intersected trapezoid in two, one trapezoid above the segment and one below (merging of trapezoids happens later)
         for (int i=0; i < toSplit.Count; i++)
         {
-            // TODO, COMPLETELY WRONG, LEFT AND RIGHT POINTS ARE NOT DEFINED LIKE THIS. I think? Nope, I use this 'mistake' during the merging
             newUpper = new Trapezoid(toSplit[i].left, toSplit[i].right, toSplit[i].top, seg);
             newLower = new Trapezoid(toSplit[i].left, toSplit[i].right, seg, toSplit[i].bottom);
             Debug.Log("Considering trapezoid " + i + ". The oldLower is " + ((oldLower == null) ? "null" : oldLower.show()));
-            /*
-             * I clearly don't know what I am doing anymore, ignore this. TODO cleanup
-            // The left point of the new trapezoids is on the segment, at the x-coord of the previous left point
-            // The right point of the new trapezoids is on the segment, at the x-coord of the previous right point
-            //Vector2 new_left = new Vector2(toSplit[i].left.x, seg.DetermineY(toSplit[i].left.x));
-            //Vector2 new_right = new Vector2(toSplit[i].right.x, seg.DetermineY(toSplit[i].right.x));
-            //newUpper = new Trapezoid(new_left, new_right, toSplit[i].top, seg);
-            //newLower = new Trapezoid(new_left, new_right, seg, toSplit[i].bottom);
-            */
             // If the first trapezoid is split in three, don't start the new trapezoids at the left point of trapezoid, but at segment
             if (StartDegenerate)
             {
@@ -672,7 +659,7 @@ public class Trapezoid
         left = l;
         right = r;
 
-        // cleanup eventually
+        // cleanup eventually (or not, error messages are always useful)
         if (left.x > right.x)
         {
             Debug.LogError("Created trapezoid with wrong points\n" + this.show());
