@@ -294,11 +294,10 @@ namespace Shepherd
             // locations
             StartVoronoi();
             foreach (Vector2 me in shepherds)
-            {
-                m_activeShepherd = Random.Range(0, 4);
+            {   
                 //Add vertex to the triangulation and update the voronoi
                 Delaunay.AddVertex(m_delaunay, me);
-                m_delaunay.SetOwner(me, m_activeShepherd);
+                m_delaunay.SetOwner(me, Random.Range(0, 4));
                 m_dcel = Voronoi.Create(m_delaunay);
             }
 
@@ -356,8 +355,8 @@ namespace Shepherd
             while (result.Count < count)
             {
                 // find uniform random positions in the rectangle (0,0) (1,1)
-                var xpos = Random.Range(0.0f, 1.0f);
-                var ypos = Random.Range(0.0f, 1.0f);
+                var xpos = Random.Range(0.0f, 6.0f);
+                var ypos = Random.Range(0.0f, 6.0f);
                 var pos = new Vector2(xpos, ypos);
                 result.Add(pos);
 
