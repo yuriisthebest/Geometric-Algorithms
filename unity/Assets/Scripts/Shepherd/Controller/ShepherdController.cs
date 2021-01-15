@@ -158,6 +158,7 @@ namespace Shepherd
                             // Solution without shepherds is always wrong
                             Debug.LogAssertion("The current solution is wrong!");
                             continueButton.SetActive(false);
+                            UpdateText(m_sheep.Count);
                         }
 
                         // Update Voronoi drawing
