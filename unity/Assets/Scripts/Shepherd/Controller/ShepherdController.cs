@@ -132,7 +132,6 @@ namespace Shepherd
                         m_shepherds.Remove(lastHitObject); // remove from shepherd clone list
                         shepherdLocs.Remove(lastHitObject.transform.position); // remove location from list
                         Destroy(lastHitObject);
-                        UpdateText();
                         // Create new Delaunay triangulation
                         m_delaunay = Delaunay.Create();
                         foreach (KeyValuePair<Vector2, int> o in shepherdLocs)
@@ -279,7 +278,7 @@ namespace Shepherd
             // Update Voronoi
             StartVoronoi();
             UpdateMesh();
-            UpdateText();
+            UpdateText(m_sheep.Count);
 
         }
 
@@ -295,7 +294,7 @@ namespace Shepherd
             shepherdLocs = new Dictionary<Vector2, int>();
             StartVoronoi();
             UpdateMesh();
-            UpdateText();
+            UpdateText(m_sheep.Count);
         }
 
         // Advance the level or give the victory screen
@@ -453,7 +452,8 @@ namespace Shepherd
                 + (this.m_sheep.Count - wrong) + " out of " + this.m_sheep.Count + " correct");
 
             // Update shepherd count text
-            UpdateText();
+            UpdateText(wrong);
+
             continueButton.SetActive(wrong == 0);
             return wrong;
         }
@@ -546,9 +546,9 @@ namespace Shepherd
             m_meshFilter.mesh.uv = newUVs.ToArray();
         }
 
-        private void UpdateText()
+        private void UpdateText(int wrong)
         {
-            shepherdCount_text.text = "Shepherds: " + shepherdLocs.Count + "/" + budget + "\nIncorrect sheep: " + m_sheep.Count;
+            shepherdCount_text.text = "Shepherds: " + shepherdLocs.Count + "/" + budget + "\nIncorrect sheep: " + wrong;
         }
 
     }
