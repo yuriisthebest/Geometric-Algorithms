@@ -7,6 +7,7 @@
     /// <summary>
     /// Static class responsible for displaying voronoi graph and concepts.
     /// Draws the Voronoi graph, as well as edges of Delaunay triangulation and circumcircles of delaunay triangles.
+    /// Edited from Voronoi implementation, also draws vertical decomposition
     /// </summary>
     public static class VoronoiDrawer
     {
@@ -110,6 +111,10 @@
 
             GL.End();
         }
+        public static void setDCEL(DCEL dcel)
+        {
+            voronoi_dcel = dcel;
+        }
 
         private static void drawDCEL(DCEL dcel)
         {
@@ -124,44 +129,35 @@
             GL.End();
         }
 
-        public static void setDCEL(DCEL dcel)
+        private static Vector2 intersect(LineSegment ls, Vector2 p)
         {
-            voronoi_dcel = dcel;
-        }
+            var x1 = ls.point1.x;
+            var x2 = ls.point2.x;
+            var y1 = ls.point1.y;
+            var y2 = ls.point2.y;
 
-        /// <summary>
-        /// Draws the voronoi diagram related to delaunay triangulation
-        /// </summary>
-        /// <param name="m_Delaunay"></param>
-        /// 
-        private static void DrawVoronoi(Triangulation m_Delaunay)
+            var xf = p.x;
+
+            var yf = y1 + ((xf - x1) * (y2 - y1)) / (x2 - x1);
+
+            return new Vector2(xf, yf);
+        }
+        public static void SetVD(VerticalDecomposition vd)
+        {
+            verticalDecomposition = vd;
+        }
+        public static void DrawVD(VerticalDecomposition vd)
         {
             GL.Begin(GL.LINES);
-            GL.Color(Color.black);
+            GL.Color(Color.cyan);
 
-
-
-            foreach (var halfEdge in m_Delaunay.Edges)
+            foreach (Trapezoid t in vd.traps)
             {
-                // do not draw edges for outer triangles
-                if (m_Delaunay.ContainsInitialPoint(halfEdge.T))
-                {
-                    continue;
-                }
-
-                // find relevant triangles to triangle edge
-                Triangle t1 = halfEdge.T;
-                Triangle t2 = halfEdge.Twin.T;
-
-                if (t1 != null && !t1.Degenerate &&
-                    t2 != null && !t2.Degenerate)
-                {
-                    // draw edge between circumcenters
-                    var v1 = t1.Circumcenter.Value;
-                    var v2 = t2.Circumcenter.Value;
-                    GL.Vertex3(v1.x, v1.y, 0);
-                    GL.Vertex3(v2.x, v2.y, 0);
-                }
+                // only need to draw left bounds since very rightmost is always out of frame
+                var l1 = intersect(t.top, t.left);
+                var l2 = intersect(t.bottom, t.left);
+                GL.Vertex3(l1.x, l1.y, 0);
+                GL.Vertex3(l2.x, l2.y, 0);
             }
             GL.End();
         }
@@ -187,39 +183,12 @@
             }
         }
 
-        public static void DrawVD(VerticalDecomposition vd)
-        {
-            GL.Begin(GL.LINES);
-            GL.Color(Color.cyan);
+        /// <summary>
+        /// Draws vertical decomposition
+        /// </summary>
+        /// <param name="vd"></param>
+        
 
-            foreach (Trapezoid t in vd.traps)
-            {
-                // only need to draw left bounds since very rightmost is always out of frame
-                var l1 = intersect(t.top, t.left);
-                var l2 = intersect(t.bottom, t.left);
-                GL.Vertex3(l1.x, l1.y, 0);
-                GL.Vertex3(l2.x, l2.y, 0);
-            }
-            GL.End();
-        }
 
-        public static void SetVD(VerticalDecomposition vd)
-        {
-            verticalDecomposition = vd;
-        }
-
-        private static Vector2 intersect(LineSegment ls, Vector2 p)
-        {
-            var x1 = ls.point1.x;
-            var x2 = ls.point2.x;
-            var y1 = ls.point1.y;
-            var y2 = ls.point2.y;
-
-            var xf = p.x;
-
-            var yf = y1 + ((xf - x1) * (y2 - y1)) / (x2 - x1);
-
-            return new Vector2(xf, yf);
-        }
     }
 }

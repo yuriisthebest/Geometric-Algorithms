@@ -377,17 +377,16 @@ MonoBehaviour:
   m_levels: []
   m_sheepPrefab: {fileID: 1181164488822959972, guid: 04905fd920e01f445b0d7be944208980,
     type: 3}
+  m_shepherdPrefab: {fileID: 2194025815393853170, guid: a48b0ee86f5a93741b6c3490bb1d39ef,
+    type: 3}
   m_meshFilter: {fileID: 1854514753}
   m_levelCounter: 0
   m_activeShepherd: 0
   selection: {fileID: 989143718}
   continueButton: {fileID: 508130145}
   m_endlessMode: 1
-  text: {fileID: 1308101178}
+  shepherdCount_text: {fileID: 1308101178}
   levelCount_text: {fileID: 1281455600}
-  shepherd: {fileID: 2194025815393853170, guid: a48b0ee86f5a93741b6c3490bb1d39ef,
-    type: 3}
-  playerIndex: 0
 --- !u!4 &1136243406
 Transform:
   m_ObjectHideFlags: 0
@@ -537,7 +536,7 @@ PrefabInstance:
     - target: {fileID: 7381788117382689439, guid: f683cf7260ef33e4287356370474ca37,
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
-      value: ResetRandomLevel
+      value: ResetLevel
       objectReference: {fileID: 0}
     - target: {fileID: 7381788117578238842, guid: f683cf7260ef33e4287356370474ca37,
         type: 3}
