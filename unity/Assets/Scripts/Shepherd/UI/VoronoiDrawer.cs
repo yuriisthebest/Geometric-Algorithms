@@ -129,6 +129,12 @@
             GL.End();
         }
 
+        /// <summary>
+        /// Calculate the intersection point of line segment ls with the vertical extension of point p
+        /// </summary>
+        /// <param name="ls"></param>
+        /// <param name="p"></param>
+        /// <returns>intersection point</returns>
         private static Vector2 intersect(LineSegment ls, Vector2 p)
         {
             var x1 = ls.point1.x;
@@ -142,10 +148,16 @@
 
             return new Vector2(xf, yf);
         }
+
         public static void SetVD(VerticalDecomposition vd)
         {
             verticalDecomposition = vd;
         }
+
+        /// <summary>
+        /// Draw the vertical decomposition vd
+        /// </summary>
+        /// <param name="vd"></param>
         public static void DrawVD(VerticalDecomposition vd)
         {
             GL.Begin(GL.LINES);
@@ -182,13 +194,6 @@
                 }
             }
         }
-
-        /// <summary>
-        /// Draws vertical decomposition
-        /// </summary>
-        /// <param name="vd"></param>
-        
-
 
     }
 }
